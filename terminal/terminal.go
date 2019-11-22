@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	fluid "github.com/esimov/ascii-fluid/fluid-solver"
+	"github.com/esimov/ascii-fluid/wasm/canvas"
 	"github.com/nsf/termbox-go"
 )
 
@@ -123,7 +124,6 @@ mainloop:
 					isMouseDown = true
 					mx, my = ev.MouseX, ev.MouseY
 					t.onMouseMove(mx, my)
-					//t.log(t.logfile, "X:%d \t Y:%d\n", mx, my)
 
 					//t.redraw(mx, my)
 				}
@@ -176,7 +176,6 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	// Mouse velocity
 	du := float64(mouseX-oldMouseX) * 1.5
 	dv := float64(mouseY-oldMouseY) * 1.5
-	fmt.Println(du, dv)
 
 	// Add the mouse velocity to cells above, below, to the left, and to the right as well.
 	t.fs.SetCell("uOld", i, j, du)
@@ -235,7 +234,6 @@ func (t *Terminal) update() {
 		p.SetAge(float64(p.GetAge()) + dt)
 
 		alpha := float64(1 - p.GetAge()/particleTimeToLive)
-		//fmt.Println(alpha)
 		if alpha < 0.001 ||
 			p.GetAge() >= particleTimeToLive ||
 			p.GetX() <= 0 || p.GetX() >= termWidth ||
@@ -245,27 +243,17 @@ func (t *Terminal) update() {
 			x0 := int(math.Abs(float64(p.GetX())/float64(termWidth))*numOfCells) + 2
 			y0 := int(math.Abs(float64(p.GetY())/float64(termHeight))*numOfCells) + 2
 
-			//t.log(t.logfile, "X: %v \t Y:%v\n", x0, y0)
-			//fmt.Println(float64(p.GetX())/float64(termWidth), p.GetY()/termHeight)
-			//fmt.Println(t.fs.GetCell("u", x0, y0))
-
 			p.SetVx(t.fs.GetCell("u", x0, y0) * 50)
 			p.SetVy(t.fs.GetCell("v", x0, y0) * 50)
 
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
 
-			//fmt.Println(p.GetX(), p.GetY())
-
 			attrf := func() (rune, termbox.Attribute, termbox.Attribute) {
 				return '·', termbox.ColorDefault, termbox.ColorDefault
 			}
 			r, fg, bg := attrf()
-			//termbox.SetCell(int(random(rnd, 0, termWidth)), int(random(rnd, 0, termHeight)), r, fg, bg)
-			// rn := random(rnd, -3, 3)
-			// termbox.SetCell(p.GetX()+int(rn), p.GetY()+int(rn), r, fg, bg)
 			termbox.SetCell(p.GetX(), p.GetY(), r, fg, bg)
-			//t.log(t.logfile, "X: %v \t Y:%v\n", p.GetX(), p.GetY())
 		}
 
 		if p.GetDeath() {
@@ -308,12 +296,11 @@ func (t *Terminal) update() {
 	termbox.Flush()
 }
 
-// func (t *Terminal) getRune() rune {
-// 	for i := 1; i <= termWidth; i++ {
-// 		range := i * termHeight + 1
-// 		retval :=
-// 	}
-// }
+func (t *Terminal) retriveWebCamFeed() {
+	c := canvas.NewCanvas()
+	res := c.Feed()
+	fmt.Println(res)
+}
 
 func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {
 	fmt.Fprintf(f, format, vals...)
