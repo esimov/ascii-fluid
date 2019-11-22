@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"math"
@@ -11,7 +12,6 @@ import (
 	"unicode/utf8"
 
 	fluid "github.com/esimov/ascii-fluid/fluid-solver"
-	"github.com/esimov/ascii-fluid/wasm/canvas"
 	"github.com/nsf/termbox-go"
 )
 
@@ -50,6 +50,8 @@ var (
 	termHeight int
 	cellSize   int
 	particles  []*fluid.Particle
+
+	scanner *bufio.Scanner
 )
 
 func init() {
@@ -60,6 +62,10 @@ func New() *Terminal {
 	t := new(Terminal)
 	t.fn = "debug.log"
 	t.logfile, _ = os.OpenFile(t.fn, os.O_CREATE|os.O_RDWR, 0755)
+
+	file, _ := os.OpenFile("../dets", os.O_CREATE|os.O_RDWR, 0755)
+	scanner = bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
 
 	return t
 }
@@ -136,6 +142,7 @@ mainloop:
 			go func() {
 				defer wg.Done()
 				t.update()
+				//t.retriveDetections()
 			}()
 			wg.Wait()
 			time.Sleep(10 * time.Millisecond)
@@ -296,10 +303,12 @@ func (t *Terminal) update() {
 	termbox.Flush()
 }
 
-func (t *Terminal) retriveWebCamFeed() {
-	c := canvas.NewCanvas()
-	res := c.Feed()
-	fmt.Println(res)
+func (t *Terminal) retriveDetections() {
+	for scanner.Scan() { // internally, it advances token based on sperator
+		fmt.Println(scanner.Text())  // token in unicode-char
+		fmt.Println(scanner.Bytes()) // token in bytes
+
+	}
 }
 
 func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {

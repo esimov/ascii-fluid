@@ -64,7 +64,7 @@ func NewCanvas() *Canvas {
 
 	det = detector.NewDetector()
 
-	file, _ := os.OpenFile("dets", os.O_CREATE|os.O_RDWR, 0755)
+	file, _ := os.OpenFile("../../dets", os.O_CREATE|os.O_RDWR, 0755)
 	c.buff = bufio.NewWriter(file)
 	return &c
 }
@@ -168,17 +168,10 @@ func (c *Canvas) StartWebcam() (*Canvas, error) {
 	})
 
 	opts := js.Global().Get("Object").New()
-	widthOpts := js.Global().Get("Object").New()
-	widthOpts.Set("min", 1024)
-	widthOpts.Set("max", 1920)
-
-	heightOpts := js.Global().Get("Object").New()
-	heightOpts.Set("min", 720)
-	heightOpts.Set("max", 1080)
 
 	videoSize := js.Global().Get("Object").New()
-	videoSize.Set("width", widthOpts)
-	videoSize.Set("height", heightOpts)
+	videoSize.Set("width", c.windowSize.width)
+	videoSize.Set("height", c.windowSize.height)
 	videoSize.Set("aspectRatio", 1.777777778)
 
 	opts.Set("video", videoSize)
