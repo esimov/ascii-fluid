@@ -21,7 +21,8 @@ wasm:
 
 serve:
 	$(BROWSER) 'http://localhost:5000'
-	serve
+	#serve
+	go run ../main.go
 
 terminal:
 	$(COMMAND)

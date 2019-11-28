@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"syscall/js"
@@ -64,8 +63,6 @@ func NewCanvas() *Canvas {
 
 	det = detector.NewDetector()
 
-	file, _ := os.OpenFile("../../dets", os.O_CREATE|os.O_RDWR, 0755)
-	c.buff = bufio.NewWriter(file)
 	return &c
 }
 
