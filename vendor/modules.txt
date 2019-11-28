@@ -1,0 +1,8 @@
+# github.com/esimov/pigo v1.4.0
+github.com/esimov/pigo/core
+# github.com/gorilla/websocket v1.4.1
+github.com/gorilla/websocket
+# github.com/mattn/go-runewidth v0.0.6
+github.com/mattn/go-runewidth
+# github.com/nsf/termbox-go v0.0.0-20190817171036-93860e161317
+github.com/nsf/termbox-go
