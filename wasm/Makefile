@@ -24,7 +24,7 @@ wasm:
 serve:
 	$(BROWSER) 'http://localhost:5000'
 	#serve
-	go run $(PARENTDIR)/http/init.go
+	go run $(PARENTDIR)/server/main.go
 
 terminal:
 	$(COMMAND)

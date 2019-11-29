@@ -1,9 +1,20 @@
-package main
+package http
 
 import (
 	"github.com/esimov/ascii-fluid/wasm/websocket"
 )
 
-func main() {
-	websocket.Init()
+var ws websocket.HttpParams
+
+func InitServer() {
+	ws = websocket.HttpParams{
+		Address: "localhost:5000",
+		Prefix:  "/",
+		Root:    ".",
+	}
+	ws.Init()
+}
+
+func GetParams() websocket.HttpParams {
+	return ws
 }

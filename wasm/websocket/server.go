@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"flag"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -15,52 +14,36 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// Init initializes the webserver and websocket connection
-func Init() {
-	addr := flag.String("a", ":5000", "address to serve(host:port)")
-	prefix := flag.String("p", "/", "prefix path under")
-	root := flag.String("r", ".", "root path to serve")
-	flag.Parse()
+type HttpParams struct {
+	Address string
+	Prefix  string
+	Root    string
+}
 
+// Init initializes the webserver and websocket connection
+func (p *HttpParams) Init() {
 	var err error
-	*root, err = filepath.Abs(*root)
+	p.Root, err = filepath.Abs(p.Root)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Printf("serving %s as %s on %s", *root, *prefix, *addr)
-	http.Handle(*prefix, http.StripPrefix(*prefix, http.FileServer(http.Dir(*root))))
-	http.HandleFunc("/ws", wsEndpoint)
+	log.Printf("serving %s as %s on %s", p.Root, p.Prefix, p.Address)
+	http.Handle(p.Prefix, http.StripPrefix(p.Prefix, http.FileServer(http.Dir(p.Root))))
+	http.HandleFunc("/ws", p.wsEndpoint)
 
 	mux := http.DefaultServeMux.ServeHTTP
 	logger := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Print(r.RemoteAddr + " " + r.Method + " " + r.URL.String())
 		mux(w, r)
 	})
-	err = http.ListenAndServe(*addr, logger)
+	err = http.ListenAndServe(p.Address, logger)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-// wsEndpoint defines the websocket connection endpoint
-func wsEndpoint(w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-
-	// Upgrade the http connection to a WebSocket connection
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		if _, ok := err.(websocket.HandshakeError); !ok {
-			log.Println(err)
-		}
-		return
-	}
-
-	defer ws.Close()
-	reader(ws)
-}
-
 // reader listen for new messages being sent to the websocket
-func reader(conn *websocket.Conn) {
+func (p *HttpParams) reader(conn *websocket.Conn) {
 	for {
 		messageType, msg, err := conn.ReadMessage()
 		if err != nil {
@@ -74,4 +57,21 @@ func reader(conn *websocket.Conn) {
 			return
 		}
 	}
+}
+
+// wsEndpoint defines the websocket connection endpoint
+func (p *HttpParams) wsEndpoint(w http.ResponseWriter, r *http.Request) {
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+	// Upgrade the http connection to a WebSocket connection
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		if _, ok := err.(websocket.HandshakeError); !ok {
+			log.Println(err)
+		}
+		return
+	}
+
+	defer ws.Close()
+	p.reader(ws)
 }

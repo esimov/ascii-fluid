@@ -61,6 +61,7 @@ func NewCanvas() *Canvas {
 
 	det = detector.NewDetector()
 
+	InitWebSocket()
 	return &c
 }
 
