@@ -2,13 +2,15 @@ ifeq ($(OS),Windows_NT)
     BROWSER = start
 else
 	UNAME := $(shell uname -s)
+	PARENTDIR := $(shell dirname "$$PWD")
+
 	ifeq ($(UNAME), Linux)
 		BROWSER = xdg-open
 		COMMAND = gnome-terminal --tab --command="bash -c 'go run ../main.go; $(SHELL)'"
 	endif
 	ifeq ($(UNAME), Darwin)
 		BROWSER = open
-		COMMAND = osascript -e 'tell app "Terminal" to do script "go run ../main.go"'
+		COMMAND = osascript -e 'tell app "Terminal" to do script "go run $(PARENTDIR)/main.go"'
 	endif
 endif
 
@@ -26,7 +28,6 @@ serve:
 
 terminal:
 	$(COMMAND)
-
 clean:
 	rm -f *.wasm
 
