@@ -38,10 +38,10 @@ const (
 
 type FluidSolver fluidSolver
 
-func NewSolver(nx, ny int) *FluidSolver {
+func NewSolver(n int) *FluidSolver {
 	fs := &FluidSolver{
-		nx:          nx,
-		ny:          ny,
+		nx:          n,
+		ny:          n,
 		dt:          0.1,
 		diffusion:   0.0002,
 		viscosity:   0.0,
@@ -49,7 +49,7 @@ func NewSolver(nx, ny int) *FluidSolver {
 		doVorticity: true,
 		doBouyancy:  true,
 	}
-	fs.numOfCells = (nx + 2) * (ny + 2)
+	fs.numOfCells = (n + 2) * (n + 2)
 	fs.u = make(cell, fs.numOfCells)
 	fs.v = make(cell, fs.numOfCells)
 	fs.d = make(cell, fs.numOfCells)
@@ -203,12 +203,10 @@ func (fs *FluidSolver) calcVorticityConfinement(x, y cell) {
 
 	for i = 1; i <= fs.nx; i++ {
 		for j = 1; j <= fs.ny; j++ {
+			// Calculate the magnitude of curl(i, j) for each cell
 			fs.curlData[fs.idx(i, j)] = math.Abs(fs.curl(i, j))
-		}
-	}
 
-	for i = 1; i <= fs.nx; i++ {
-		for j = 1; j <= fs.ny; j++ {
+			// Calculate the derivative of the magnitude (n = del |w|)
 			dx = fs.curlData[fs.idx(i+1, j)] - fs.curlData[fs.idx(i-1, j)]*0.5
 			dy = fs.curlData[fs.idx(i, j+1)] - fs.curlData[fs.idx(i, j-1)]*0.5
 
@@ -340,8 +338,7 @@ func (fs *FluidSolver) advect(bound BoundaryType, d, d0, u, v cell) {
 }
 
 func (fs *FluidSolver) setBoundary(bound BoundaryType, x cell) {
-	// TODO check nx dimmension (boundary)
-	for i := 1; i <= fs.nx-2; i++ {
+	for i := 1; i <= fs.nx; i++ {
 		if bound == BoundaryLeftRight {
 			x[fs.idx(0, i)] = -x[fs.idx(1, i)]
 			x[fs.idx(fs.nx+1, i)] = -x[fs.idx(fs.nx, i)]

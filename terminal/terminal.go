@@ -34,7 +34,7 @@ type options struct {
 }
 
 const (
-	numOfCells         = 128 // Number of cells (not including the boundary)
+	numOfCells         = 64 // Number of cells (not including the boundary)
 	particleTimeToLive = 5
 )
 
@@ -79,9 +79,6 @@ func (t *Terminal) Init() *Terminal {
 		panic(err)
 	}
 
-	t.fs = fluid.NewSolver(termbox.Size())
-	t.fs.ResetVelocity()
-
 	startTime = time.Now()
 	isMouseDown = false
 	oldMouseX = 0
@@ -90,6 +87,9 @@ func (t *Terminal) Init() *Terminal {
 
 	termWidth, termHeight = termbox.Size()
 	cellSize = termWidth / numOfCells
+
+	t.fs = fluid.NewSolver(numOfCells)
+	t.fs.ResetVelocity()
 
 	return t
 }
@@ -171,7 +171,7 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	i := int(math.Abs(float64(mouseX)/float64(termWidth))*numOfCells) + 1
 	j := int(math.Abs(float64(mouseY)/float64(termHeight))*numOfCells) + 1
 
-	// Dont overflow grid bounds
+	// Don't overflow grid bounds
 	if i > numOfCells || i < 1 || j > numOfCells || j < 1 {
 		return
 	}
