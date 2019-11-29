@@ -6,7 +6,7 @@ else
 
 	ifeq ($(UNAME), Linux)
 		BROWSER = xdg-open
-		COMMAND = gnome-terminal --tab --command="bash -c 'go run ../main.go; $(SHELL)'"
+		COMMAND = gnome-terminal --tab --command="bash -c 'go run $(PARENTDIR)/main.go; $(SHELL)'"
 	endif
 	ifeq ($(UNAME), Darwin)
 		BROWSER = open
@@ -24,7 +24,7 @@ wasm:
 serve:
 	$(BROWSER) 'http://localhost:5000'
 	#serve
-	go run ../main.go
+	go run $(PARENTDIR)/http/init.go
 
 terminal:
 	$(COMMAND)
