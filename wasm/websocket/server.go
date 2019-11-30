@@ -21,7 +21,7 @@ type HttpParams struct {
 }
 
 // Init initializes the webserver and websocket connection
-func (p *HttpParams) Init() {
+func Init(p *HttpParams) {
 	var err error
 	p.Root, err = filepath.Abs(p.Root)
 	if err != nil {
@@ -29,7 +29,7 @@ func (p *HttpParams) Init() {
 	}
 	log.Printf("serving %s as %s on %s", p.Root, p.Prefix, p.Address)
 	http.Handle(p.Prefix, http.StripPrefix(p.Prefix, http.FileServer(http.Dir(p.Root))))
-	http.HandleFunc("/ws", p.wsEndpoint)
+	http.HandleFunc("/ws", wsEndpoint)
 
 	mux := http.DefaultServeMux.ServeHTTP
 	logger := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func (p *HttpParams) Init() {
 }
 
 // reader listen for new messages being sent to the websocket
-func (p *HttpParams) reader(conn *websocket.Conn) {
+func reader(conn *websocket.Conn) {
 	for {
 		messageType, msg, err := conn.ReadMessage()
 		if err != nil {
@@ -60,7 +60,7 @@ func (p *HttpParams) reader(conn *websocket.Conn) {
 }
 
 // wsEndpoint defines the websocket connection endpoint
-func (p *HttpParams) wsEndpoint(w http.ResponseWriter, r *http.Request) {
+func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	// Upgrade the http connection to a WebSocket connection
@@ -73,5 +73,5 @@ func (p *HttpParams) wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer ws.Close()
-	p.reader(ws)
+	reader(ws)
 }

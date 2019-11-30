@@ -61,7 +61,7 @@ func NewCanvas() *Canvas {
 
 	det = detector.NewDetector()
 
-	InitWebSocket()
+	c.InitWebSocket()
 	return &c
 }
 
@@ -93,38 +93,6 @@ func (c *Canvas) Render() {
 		c.detectKeyPress()
 		<-c.done
 	}
-}
-
-func (c *Canvas) Feed() [][]int {
-	dets := make([][]int, 0)
-	for {
-		select {
-		case det, ok := <-c.dets:
-			if ok {
-				// coordString := []string{}
-
-				// for coord := range det[0] {
-				// 	coordString = append(coordString, strconv.Itoa(coord))
-				// }
-				// coords := strings.Join(coordString, ",")
-				// _, err := c.buff.WriteString(coords + "\n")
-
-				// if err != nil {
-				// 	close(c.dets)
-				// }
-				copy(dets, det)
-			}
-		}
-	}
-	close(c.dets)
-	return dets
-}
-
-// Stop stops the rendering.
-func (c *Canvas) Stop() {
-	c.window.Call("cancelAnimationFrame", c.reqID)
-	c.done <- struct{}{}
-	close(c.done)
 }
 
 // StartWebcam reads the webcam data and feeds it into the canvas element.
@@ -182,6 +150,38 @@ func (c *Canvas) StartWebcam() (*Canvas, error) {
 	case err := <-c.errCh:
 		return nil, err
 	}
+}
+
+// Stop stops the rendering.
+func (c *Canvas) Stop() {
+	c.window.Call("cancelAnimationFrame", c.reqID)
+	c.done <- struct{}{}
+	close(c.done)
+}
+
+func (c *Canvas) Feed() [][]int {
+	dets := make([][]int, 0)
+	for {
+		select {
+		case det, ok := <-c.dets:
+			if ok {
+				// coordString := []string{}
+
+				// for coord := range det[0] {
+				// 	coordString = append(coordString, strconv.Itoa(coord))
+				// }
+				// coords := strings.Join(coordString, ",")
+				// _, err := c.buff.WriteString(coords + "\n")
+
+				// if err != nil {
+				// 	close(c.dets)
+				// }
+				copy(dets, det)
+			}
+		}
+	}
+	close(c.dets)
+	return dets
 }
 
 // rgbaToGrayscale converts the rgb pixel values to grayscale
