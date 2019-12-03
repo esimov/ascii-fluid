@@ -6,18 +6,13 @@ import (
 	"github.com/esimov/ascii-fluid/http"
 )
 
-type Socket struct {
-	Canvas
-}
-
-func (c *Socket) InitWebSocket() {
+func (c *Canvas) InitWebSocket() {
 	webSocketParams := http.GetParams()
-	ws := js.Global().Get("WebSocket").New("ws://" + webSocketParams.Address + "/ws")
+	c.ws = js.Global().Get("WebSocket").New("ws://" + webSocketParams.Address + "/ws")
 	c.Log("Attempting websocket connection...")
 
 	openCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		c.Log("Websocket connection open!")
-		ws.Call("send", "Hi From the Client!")
 		return nil
 	})
 
@@ -33,7 +28,11 @@ func (c *Socket) InitWebSocket() {
 		return nil
 	})
 
-	ws.Call("addEventListener", "open", openCallback)
-	ws.Call("addEventListener", "close", closeCallback)
-	ws.Call("addEventListener", "error", errorCallback)
+	c.ws.Call("addEventListener", "open", openCallback)
+	c.ws.Call("addEventListener", "close", closeCallback)
+	c.ws.Call("addEventListener", "error", errorCallback)
+}
+
+func (c *Canvas) send(value string) {
+	c.ws.Call("send", value)
 }

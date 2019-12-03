@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	fluid "github.com/esimov/ascii-fluid/fluid-solver"
+	"github.com/esimov/ascii-fluid/wasm/websocket"
 	"github.com/nsf/termbox-go"
 )
 
@@ -138,10 +139,11 @@ mainloop:
 			go func() {
 				defer wg.Done()
 				t.update()
-				//t.retriveDetectionPoints()
 			}()
 			wg.Wait()
 			time.Sleep(10 * time.Millisecond)
+
+			go t.getDetectionResults()
 		}
 	}
 }
@@ -297,6 +299,24 @@ func (t *Terminal) update() {
 	// 	}
 	// }
 	termbox.Flush()
+}
+
+func (t *Terminal) getDetectionResults() {
+	defer func() {
+		close(websocket.MsgHub.Message)
+	}()
+
+	for {
+		fmt.Println("TEST")
+		fmt.Println(<-websocket.MsgHub.Message)
+		select {
+		case msg, ok := <-websocket.MsgHub.Message:
+			if !ok {
+				fmt.Println("closed")
+			}
+			fmt.Println(msg)
+		}
+	}
 }
 
 func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {

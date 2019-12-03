@@ -1,7 +1,9 @@
 package canvas
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"syscall/js"
 
@@ -34,6 +36,9 @@ type Canvas struct {
 	showPupil  bool
 	drawCircle bool
 	flploc     bool
+
+	// Websocket
+	ws js.Value
 }
 
 var det *detector.Detector
@@ -69,7 +74,6 @@ func NewCanvas() *Canvas {
 func (c *Canvas) Render() {
 	var data = make([]byte, c.windowSize.width*c.windowSize.height*4)
 	c.done = make(chan struct{})
-	c.dets = make(chan [][]int)
 
 	if err := det.UnpackCascades(); err == nil {
 		c.renderer = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -85,7 +89,10 @@ func (c *Canvas) Render() {
 				pixels := c.rgbaToGrayscale(data)
 				res := det.DetectFaces(pixels, height, width)
 				c.drawDetection(res)
-				c.dets <- res
+
+				if len(res) > 0 {
+					c.send(string(c.stringify(res[0])))
+				}
 			}()
 			return nil
 		})
@@ -182,6 +189,17 @@ func (c *Canvas) Feed() [][]int {
 	}
 	close(c.dets)
 	return dets
+}
+
+func (c *Canvas) stringify(res []int) []byte {
+	x, y := res[1], res[0]
+	result := c.newDetection(x, y)
+
+	json, err := json.Marshal(result)
+	if err != nil {
+		log.Println(err)
+	}
+	return json
 }
 
 // rgbaToGrayscale converts the rgb pixel values to grayscale
