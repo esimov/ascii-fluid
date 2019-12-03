@@ -166,31 +166,6 @@ func (c *Canvas) Stop() {
 	close(c.done)
 }
 
-func (c *Canvas) Feed() [][]int {
-	dets := make([][]int, 0)
-	for {
-		select {
-		case det, ok := <-c.dets:
-			if ok {
-				// coordString := []string{}
-
-				// for coord := range det[0] {
-				// 	coordString = append(coordString, strconv.Itoa(coord))
-				// }
-				// coords := strings.Join(coordString, ",")
-				// _, err := c.buff.WriteString(coords + "\n")
-
-				// if err != nil {
-				// 	close(c.dets)
-				// }
-				copy(dets, det)
-			}
-		}
-	}
-	close(c.dets)
-	return dets
-}
-
 func (c *Canvas) stringify(res []int) []byte {
 	x, y := res[1], res[0]
 	result := c.newDetection(x, y)
