@@ -3,11 +3,11 @@ package canvas
 import (
 	"syscall/js"
 
-	"github.com/esimov/ascii-fluid/http"
+	"github.com/esimov/ascii-fluid/websocket"
 )
 
 func (c *Canvas) InitWebSocket() {
-	webSocketParams := http.GetParams()
+	webSocketParams := websocket.GetParams()
 	c.ws = js.Global().Get("WebSocket").New("ws://" + webSocketParams.Address + "/ws")
 	c.Log("Attempting websocket connection...")
 

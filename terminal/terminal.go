@@ -12,7 +12,7 @@ import (
 	"unicode/utf8"
 
 	fluid "github.com/esimov/ascii-fluid/fluid-solver"
-	"github.com/esimov/ascii-fluid/wasm/websocket"
+	"github.com/esimov/ascii-fluid/websocket"
 	"github.com/nsf/termbox-go"
 )
 
@@ -307,7 +307,6 @@ func (t *Terminal) getDetectionResults() {
 	}()
 
 	for {
-		fmt.Println("TEST")
 		fmt.Println(<-websocket.MsgHub.Message)
 		select {
 		case msg, ok := <-websocket.MsgHub.Message:

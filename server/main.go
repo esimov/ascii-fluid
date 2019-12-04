@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/esimov/ascii-fluid/http"
+	"github.com/esimov/ascii-fluid/websocket"
 )
 
 func main() {
-	http.InitServer()
+	websocket.InitServer()
 }

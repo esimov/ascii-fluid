@@ -91,7 +91,7 @@ func readSocket(conn *websocket.Conn) {
 
 // wsHandler defines the websocket connection endpoint
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	//upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	// Upgrade the http connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)

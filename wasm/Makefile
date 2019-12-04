@@ -28,6 +28,7 @@ serve:
 
 terminal:
 	$(COMMAND)
+
 clean:
 	rm -f *.wasm
 
