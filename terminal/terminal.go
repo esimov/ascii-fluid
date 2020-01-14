@@ -9,22 +9,20 @@ import (
 	"os"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	fluid "github.com/esimov/ascii-fluid/fluid-solver"
 	"github.com/esimov/ascii-fluid/websocket"
-	"github.com/nsf/termbox-go"
+	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/encoding"
+	runewidth "github.com/mattn/go-runewidth"
 )
 
-type attrFunc func() (rune, termbox.Attribute, termbox.Attribute)
-
 type Terminal struct {
-	backbuf  []termbox.Cell
-	bbw, bbh int
-	logfile  *os.File
-	fn       string
-	fs       *fluid.FluidSolver
-	opts     *options
+	screen  tcell.Screen
+	logfile *os.File
+	fn      string
+	fs      *fluid.FluidSolver
+	opts    *options
 }
 
 type options struct {
@@ -40,8 +38,8 @@ const (
 )
 
 var (
-	rnd       *rand.Rand
-	startTime time.Time
+	rnd      *rand.Rand
+	lastTime time.Time
 
 	isMouseDown bool
 	oldMouseX   int
@@ -54,6 +52,9 @@ var (
 
 	scanner *bufio.Scanner
 )
+
+var style = tcell.StyleDefault.
+	Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
 
 func init() {
 	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -68,6 +69,7 @@ func New() *Terminal {
 }
 
 func (t *Terminal) Init() *Terminal {
+	var err error
 	t.opts = &options{
 		drawVelocityField: false,
 		drawDensityField:  true,
@@ -75,18 +77,32 @@ func (t *Terminal) Init() *Terminal {
 		grayscale:         false,
 	}
 
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
-	}
-
-	startTime = time.Now()
+	lastTime = time.Now()
 	isMouseDown = false
 	oldMouseX = 0
 	oldMouseY = 0
 	particles = make([]*fluid.Particle, 0)
 
-	termWidth, termHeight = termbox.Size()
+	t.screen, err = tcell.NewScreen()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	encoding.Register()
+
+	if e := t.screen.Init(); e != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", e)
+		os.Exit(1)
+	}
+	defStyle := tcell.StyleDefault.
+		Background(tcell.ColorBlack).
+		Foreground(tcell.ColorWhite)
+	t.screen.SetStyle(defStyle)
+	t.screen.EnableMouse()
+	t.screen.Clear()
+
+	termWidth, termHeight = t.screen.Size()
 	cellSize = termWidth / numOfCells
 
 	t.fs = fluid.NewSolver(numOfCells)
@@ -96,76 +112,49 @@ func (t *Terminal) Init() *Terminal {
 }
 
 func (t *Terminal) Render() {
-	defer t.logfile.Close()
-	defer termbox.Close()
-
-	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
-	t.reallocBackBuffer(termbox.Size())
-
 	wg := sync.WaitGroup{}
-	ticker := time.Tick(time.Millisecond * time.Duration(5))
+	mx, my := -1, -1
+	//posfmt := "Mouse: %d, %d  "
 
-	eventQueue := make(chan termbox.Event)
-	go func() {
-		for {
-			eventQueue <- termbox.PollEvent()
-		}
-	}()
+	defer t.logfile.Close()
 
-mainloop:
 	for {
-		mx, my := -1, -1
-		select {
-		case ev := <-eventQueue:
-			switch ev.Type {
-			case termbox.EventKey:
-				if ev.Key == termbox.KeyEsc {
-					break mainloop
-				}
-			case termbox.EventMouse:
-				if ev.Key == termbox.MouseLeft {
-					isMouseDown = true
-					mx, my = ev.MouseX, ev.MouseY
-					t.onMouseMove(mx, my)
+		//print(t.screen, 2, 3, style, fmt.Sprintf(posfmt, mx, my))
+		ev := t.screen.PollEvent()
 
-					//t.redraw(mx, my)
-				}
-			case termbox.EventResize:
-				t.reallocBackBuffer(ev.Width, ev.Height)
+		switch ev := ev.(type) {
+		case *tcell.EventResize:
+			t.screen.Sync()
+		case *tcell.EventKey:
+			if ev.Key() == tcell.KeyEscape {
+				t.screen.Fini()
+				os.Exit(0)
+			}
+		case *tcell.EventMouse:
+			mx, my = ev.Position()
+			t.onMouseMove(mx, my)
+
+			switch ev.Buttons() {
+			case tcell.Button1:
+				isMouseDown = true
+			case tcell.ButtonNone:
+				isMouseDown = false
 			}
 		default:
-			wg.Add(1)
-			<-ticker
-			go func() {
-				defer wg.Done()
-				t.update()
-			}()
-			wg.Wait()
-			time.Sleep(10 * time.Millisecond)
-
 			go t.getDetectionResults()
 		}
-	}
-}
 
-func (t *Terminal) reallocBackBuffer(w, h int) {
-	t.bbw, t.bbh = w, h
-	t.backbuf = make([]termbox.Cell, w*h)
-}
+		t.screen.Show()
 
-func (t *Terminal) redraw(mx, my int) {
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	if mx != -1 && my != -1 {
-		r, _ := utf8.DecodeRuneInString("█")
-		t.backbuf[t.bbw*my+mx] = termbox.Cell{Ch: r, Fg: termbox.ColorWhite}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Clear the screen
+			t.screen.Fill(' ', style)
+			t.update()
+		}()
+		wg.Wait()
 	}
-	copy(termbox.CellBuffer(), t.backbuf)
-	attrf := func() (rune, termbox.Attribute, termbox.Attribute) {
-		return '█', termbox.ColorDefault, termbox.ColorWhite
-	}
-	r, fg, bg := attrf()
-	termbox.SetCell(mx, my, r, fg, bg)
-	termbox.Flush()
 }
 
 func (t *Terminal) onMouseMove(mouseX, mouseY int) {
@@ -182,9 +171,10 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	du := float64(mouseX-oldMouseX) * 1.5
 	dv := float64(mouseY-oldMouseY) * 1.5
 
+	print(t.screen, 2, 3, style, fmt.Sprintf("Velocity: %v, %v", du, dv))
+
 	// Add the mouse velocity to cells above, below, to the left, and to the right as well.
 	t.fs.SetCell("uOld", i, j, du)
-	//t.log(t.logfile, "Cell: %v\n", t.fs.GetCell("uOld", i, j))
 	t.fs.SetCell("vOld", i, j, dv)
 
 	t.fs.SetCell("uOld", i+1, j, du)
@@ -200,15 +190,15 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	t.fs.SetCell("vOld", i, j-1, dv)
 
 	if isMouseDown {
-		// If holding down the right mouse, add density to the cell below the mouse
-		t.fs.SetCell("dOld", i, j, 10)
+		// If holding down the mouse, add density to the cell below the mouse
+		t.fs.SetCell("dOld", i, j, 50)
 	}
 
 	if isMouseDown && t.opts.drawParticles {
 		for i := 0; i < 5; i++ {
 			p := fluid.NewParticle(
-				float64(mouseX)+random(rnd, -10, 10),
-				float64(mouseY)+random(rnd, -10, 10),
+				float64(mouseX)+random(rnd, -20, 20),
+				float64(mouseY)+random(rnd, -20, 20),
 			)
 			p.SetVy(du)
 			p.SetVy(dv)
@@ -222,13 +212,11 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 }
 
 func (t *Terminal) update() {
-	endTime := time.Now()
-	dt := endTime.Sub(startTime).Seconds()
+	dt := time.Now().Sub(lastTime).Seconds()
+	//print(t.screen, 2, 5, style, fmt.Sprintf("UPDATE %v", dt))
 
 	t.fs.VelocityStep()
 	t.fs.DensityStep()
-
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
 	if t.opts.drawVelocityField {
 		// TODO implement me
@@ -241,32 +229,35 @@ func (t *Terminal) update() {
 		alpha := float64(1 - p.GetAge()/particleTimeToLive)
 		if alpha < 0.001 ||
 			p.GetAge() >= particleTimeToLive ||
-			p.GetX() <= 0 || p.GetX() >= termWidth ||
-			p.GetY() <= 0 || p.GetY() >= termHeight {
+			p.GetX() <= 0.0 || p.GetX() >= float64(termWidth) ||
+			p.GetY() <= 0.0 || p.GetY() >= float64(termHeight) {
 			p.SetDeath(true)
 		} else {
 			x0 := int(math.Abs(float64(p.GetX())/float64(termWidth))*numOfCells) + 2
 			y0 := int(math.Abs(float64(p.GetY())/float64(termHeight))*numOfCells) + 2
 
+			//print(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v %v", x0, y0))
+
 			p.SetVx(t.fs.GetCell("u", x0, y0) * 50)
 			p.SetVy(t.fs.GetCell("v", x0, y0) * 50)
 
+			//print(t.screen, 2, 6, style, fmt.Sprintf("U cell: %v", t.fs.GetCell("u", x0, y0)*50))
+			print(t.screen, 2, 7, style, fmt.Sprintf("U cell: %v", p.GetVx()))
+
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
+			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '·', nil, tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 
-			attrf := func() (rune, termbox.Attribute, termbox.Attribute) {
-				return '·', termbox.ColorDefault, termbox.ColorDefault
-			}
-			r, fg, bg := attrf()
-			termbox.SetCell(p.GetX(), p.GetY(), r, fg, bg)
+			//print(t.screen, 2, 5, style, fmt.Sprintf("Velocity: %v %v", p.GetX(), p.GetY()))
 		}
+		//print(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v", alpha))
 
 		if p.GetDeath() {
 			// Remove dead particles, and update the length manually
 			particles = append(particles[:i], particles[i+1:]...)
 		}
 	}
-	startTime = time.Now()
+	lastTime = time.Now()
 
 	// // Render fluid
 	// for i := 1; i <= numOfCells; i++ {
@@ -298,7 +289,6 @@ func (t *Terminal) update() {
 
 	// 	}
 	// }
-	termbox.Flush()
 }
 
 func (t *Terminal) getDetectionResults() {
@@ -307,6 +297,7 @@ func (t *Terminal) getDetectionResults() {
 	}()
 
 	for {
+		fmt.Println(websocket.TestVar)
 		fmt.Println(<-websocket.MsgHub.Message)
 		select {
 		case msg, ok := <-websocket.MsgHub.Message:
@@ -324,4 +315,18 @@ func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {
 
 func random(rnd *rand.Rand, min, max int) float64 {
 	return float64(rnd.Intn(max-min) + min)
+}
+
+func print(s tcell.Screen, x, y int, style tcell.Style, str string) {
+	for _, c := range str {
+		var comb []rune
+		w := runewidth.RuneWidth(c)
+		if w == 0 {
+			comb = []rune{c}
+			c = ' '
+			w = 1
+		}
+		s.SetContent(x, y, c, comb, style)
+		x += w
+	}
 }
