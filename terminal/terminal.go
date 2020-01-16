@@ -91,10 +91,7 @@ func (t *Terminal) Init() *Terminal {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
 		os.Exit(1)
 	}
-	defStyle := tcell.StyleDefault.
-		Background(tcell.ColorBlack).
-		Foreground(tcell.ColorWhite)
-	t.screen.SetStyle(defStyle)
+	t.screen.SetStyle(termStyle)
 	t.screen.EnableMouse()
 	t.screen.Clear()
 
@@ -194,11 +191,11 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 
 	if isMouseDown {
 		// Add density to the cell below the mouse
-		t.fs.SetCell("dOld", i, j, 100)
+		t.fs.SetCell("dOld", i, j, 50)
 	}
 
 	if isMouseDown && t.opts.drawParticles {
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 20; i++ {
 			p := fluid.NewParticle(
 				float64(mouseX)+random(rnd, -10, 10),
 				float64(mouseY)+random(rnd, -10, 10),
@@ -239,12 +236,12 @@ func (t *Terminal) update() {
 			x0 := int(math.Abs(float64(p.GetX())/float64(termWidth))*numOfCells) + 2
 			y0 := int(math.Abs(float64(p.GetY())/float64(termHeight))*numOfCells) + 2
 
-			p.SetVx(t.fs.GetCell("u", x0, y0) * 200)
-			p.SetVy(t.fs.GetCell("v", x0, y0) * 200)
+			p.SetVx(t.fs.GetCell("u", x0, y0) * 100)
+			p.SetVy(t.fs.GetCell("v", x0, y0) * 100)
 
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
-			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '*', nil, tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
+			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '▄', nil, termStyle)
 
 			//debug(t.screen, 2, 2, termStyle, fmt.Sprintf("Particle: %v %v", p.GetX(), p.GetY()))
 			//debug(t.screen, 2, 3, termStyle, fmt.Sprintf("Velocity: %v %v", p.GetVx(), p.GetVy()))
