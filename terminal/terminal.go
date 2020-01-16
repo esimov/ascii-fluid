@@ -18,11 +18,10 @@ import (
 )
 
 type Terminal struct {
-	screen  tcell.Screen
-	logfile *os.File
-	fn      string
-	fs      *fluid.FluidSolver
-	opts    *options
+	screen tcell.Screen
+	fn     string
+	fs     *fluid.FluidSolver
+	opts   *options
 }
 
 type options struct {
@@ -53,7 +52,7 @@ var (
 	scanner *bufio.Scanner
 )
 
-var style = tcell.StyleDefault.
+var termStyle = tcell.StyleDefault.
 	Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
 
 func init() {
@@ -62,9 +61,6 @@ func init() {
 
 func New() *Terminal {
 	t := new(Terminal)
-	t.fn = "debug.log"
-	t.logfile, _ = os.OpenFile(t.fn, os.O_CREATE|os.O_RDWR, 0755)
-
 	return t
 }
 
@@ -114,12 +110,9 @@ func (t *Terminal) Init() *Terminal {
 func (t *Terminal) Render() {
 	wg := sync.WaitGroup{}
 	mx, my := -1, -1
-	//posfmt := "Mouse: %d, %d  "
-
-	defer t.logfile.Close()
 
 	for {
-		//print(t.screen, 2, 3, style, fmt.Sprintf(posfmt, mx, my))
+		//debug(t.screen, 2, 3, style, fmt.Sprintf("Mouse: %d, %d ", mx, my))
 		ev := t.screen.PollEvent()
 
 		switch ev := ev.(type) {
@@ -150,7 +143,7 @@ func (t *Terminal) Render() {
 		go func() {
 			defer wg.Done()
 			// Clear the screen
-			t.screen.Fill(' ', style)
+			t.screen.Fill(' ', termStyle)
 			t.update()
 		}()
 		wg.Wait()
@@ -171,7 +164,7 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	du := float64(mouseX-oldMouseX) * 1.5
 	dv := float64(mouseY-oldMouseY) * 1.5
 
-	print(t.screen, 2, 3, style, fmt.Sprintf("Velocity: %v, %v", du, dv))
+	//debug(t.screen, 2, 3, style, fmt.Sprintf("Velocity: %v, %v", du, dv))
 
 	// Add the mouse velocity to cells above, below, to the left, and to the right as well.
 	t.fs.SetCell("uOld", i, j, du)
@@ -213,7 +206,7 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 
 func (t *Terminal) update() {
 	dt := time.Now().Sub(lastTime).Seconds()
-	//print(t.screen, 2, 5, style, fmt.Sprintf("UPDATE %v", dt))
+	//debug(t.screen, 2, 5, style, fmt.Sprintf("UPDATE %v", dt))
 
 	t.fs.VelocityStep()
 	t.fs.DensityStep()
@@ -236,21 +229,21 @@ func (t *Terminal) update() {
 			x0 := int(math.Abs(float64(p.GetX())/float64(termWidth))*numOfCells) + 2
 			y0 := int(math.Abs(float64(p.GetY())/float64(termHeight))*numOfCells) + 2
 
-			//print(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v %v", x0, y0))
+			//debug(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v %v", x0, y0))
 
 			p.SetVx(t.fs.GetCell("u", x0, y0) * 50)
 			p.SetVy(t.fs.GetCell("v", x0, y0) * 50)
 
-			//print(t.screen, 2, 6, style, fmt.Sprintf("U cell: %v", t.fs.GetCell("u", x0, y0)*50))
-			print(t.screen, 2, 7, style, fmt.Sprintf("U cell: %v", p.GetVx()))
+			//debug(t.screen, 2, 6, style, fmt.Sprintf("U cell: %v", t.fs.GetCell("u", x0, y0)*50))
+			//debug(t.screen, 2, 7, style, fmt.Sprintf("U cell: %v", p.GetVx()))
 
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
-			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '·', nil, tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
+			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '*', nil, tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 
-			//print(t.screen, 2, 5, style, fmt.Sprintf("Velocity: %v %v", p.GetX(), p.GetY()))
+			//debug(t.screen, 2, 5, style, fmt.Sprintf("Velocity: %v %v", p.GetX(), p.GetY()))
 		}
-		//print(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v", alpha))
+		//debug(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v", alpha))
 
 		if p.GetDeath() {
 			// Remove dead particles, and update the length manually
@@ -275,8 +268,6 @@ func (t *Terminal) update() {
 	// 					mx := (i-1)*cellSize + l
 	// 					my := (j-1)*cellSize + m
 	// 					//pxIdx := pxX + pxY*terminalSize*4
-
-	// 					t.log(t.logfile, "x:%v\t y:%v\n", mx, my)
 
 	// 					attrf := func() (rune, termbox.Attribute, termbox.Attribute) {
 	// 						return '█', termbox.ColorDefault, termbox.ColorWhite
@@ -317,7 +308,7 @@ func random(rnd *rand.Rand, min, max int) float64 {
 	return float64(rnd.Intn(max-min) + min)
 }
 
-func print(s tcell.Screen, x, y int, style tcell.Style, str string) {
+func debug(s tcell.Screen, x, y int, style tcell.Style, str string) {
 	for _, c := range str {
 		var comb []rune
 		w := runewidth.RuneWidth(c)
