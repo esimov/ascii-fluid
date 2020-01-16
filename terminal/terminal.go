@@ -32,8 +32,8 @@ type options struct {
 }
 
 const (
-	numOfCells         = 64 // Number of cells (not including the boundary)
-	particleTimeToLive = 5
+	numOfCells         = 32 // Number of cells (not including the boundary)
+	particleTimeToLive = 3
 )
 
 var (
@@ -111,42 +111,52 @@ func (t *Terminal) Render() {
 	wg := sync.WaitGroup{}
 	mx, my := -1, -1
 
-	for {
-		//debug(t.screen, 2, 3, style, fmt.Sprintf("Mouse: %d, %d ", mx, my))
-		ev := t.screen.PollEvent()
+	quit := make(chan struct{})
+	go func() {
+		for {
+			ev := t.screen.PollEvent()
 
-		switch ev := ev.(type) {
-		case *tcell.EventResize:
-			t.screen.Sync()
-		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyEscape {
-				t.screen.Fini()
-				os.Exit(0)
-			}
-		case *tcell.EventMouse:
-			mx, my = ev.Position()
-			t.onMouseMove(mx, my)
+			switch ev := ev.(type) {
+			case *tcell.EventResize:
+				t.screen.Sync()
+			case *tcell.EventKey:
+				if ev.Key() == tcell.KeyEscape {
+					close(quit)
+					t.screen.Fini()
+					os.Exit(0)
+				}
+			case *tcell.EventMouse:
+				mx, my = ev.Position()
+				t.onMouseMove(mx, my)
 
-			switch ev.Buttons() {
-			case tcell.Button1:
-				isMouseDown = true
-			case tcell.ButtonNone:
-				isMouseDown = false
+				switch ev.Buttons() {
+				case tcell.Button1:
+					isMouseDown = true
+				case tcell.ButtonNone:
+					isMouseDown = false
+				}
+			default:
+				go t.getDetectionResults()
 			}
-		default:
-			go t.getDetectionResults()
 		}
+	}()
 
+loop:
+	for {
+		select {
+		case <-quit:
+			break loop
+		default:
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Clear the screen
+				t.screen.Fill(' ', termStyle)
+				t.update()
+			}()
+			wg.Wait()
+		}
 		t.screen.Show()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			// Clear the screen
-			t.screen.Fill(' ', termStyle)
-			t.update()
-		}()
-		wg.Wait()
 	}
 }
 
@@ -161,10 +171,10 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	}
 
 	// Mouse velocity
-	du := float64(mouseX-oldMouseX) * 1.5
-	dv := float64(mouseY-oldMouseY) * 1.5
+	du := float64(mouseX-oldMouseX) * 1.8
+	dv := float64(mouseY-oldMouseY) * 1.8
 
-	//debug(t.screen, 2, 3, style, fmt.Sprintf("Velocity: %v, %v", du, dv))
+	//debug(t.screen, 2, 3, termStyle, fmt.Sprintf("Velocity: %v, %v", du, dv))
 
 	// Add the mouse velocity to cells above, below, to the left, and to the right as well.
 	t.fs.SetCell("uOld", i, j, du)
@@ -183,15 +193,15 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	t.fs.SetCell("vOld", i, j-1, dv)
 
 	if isMouseDown {
-		// If holding down the mouse, add density to the cell below the mouse
-		t.fs.SetCell("dOld", i, j, 50)
+		// Add density to the cell below the mouse
+		t.fs.SetCell("dOld", i, j, 100)
 	}
 
 	if isMouseDown && t.opts.drawParticles {
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 10; i++ {
 			p := fluid.NewParticle(
-				float64(mouseX)+random(rnd, -20, 20),
-				float64(mouseY)+random(rnd, -20, 20),
+				float64(mouseX)+random(rnd, -10, 10),
+				float64(mouseY)+random(rnd, -10, 10),
 			)
 			p.SetVy(du)
 			p.SetVy(dv)
@@ -206,7 +216,6 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 
 func (t *Terminal) update() {
 	dt := time.Now().Sub(lastTime).Seconds()
-	//debug(t.screen, 2, 5, style, fmt.Sprintf("UPDATE %v", dt))
 
 	t.fs.VelocityStep()
 	t.fs.DensityStep()
@@ -220,7 +229,8 @@ func (t *Terminal) update() {
 		p.SetAge(float64(p.GetAge()) + dt)
 
 		alpha := float64(1 - p.GetAge()/particleTimeToLive)
-		if alpha < 0.001 ||
+		debug(t.screen, 2, 1, termStyle, fmt.Sprintf("Alpha: %v", alpha))
+		if alpha < 0.01 ||
 			p.GetAge() >= particleTimeToLive ||
 			p.GetX() <= 0.0 || p.GetX() >= float64(termWidth) ||
 			p.GetY() <= 0.0 || p.GetY() >= float64(termHeight) {
@@ -229,21 +239,16 @@ func (t *Terminal) update() {
 			x0 := int(math.Abs(float64(p.GetX())/float64(termWidth))*numOfCells) + 2
 			y0 := int(math.Abs(float64(p.GetY())/float64(termHeight))*numOfCells) + 2
 
-			//debug(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v %v", x0, y0))
-
-			p.SetVx(t.fs.GetCell("u", x0, y0) * 50)
-			p.SetVy(t.fs.GetCell("v", x0, y0) * 50)
-
-			//debug(t.screen, 2, 6, style, fmt.Sprintf("U cell: %v", t.fs.GetCell("u", x0, y0)*50))
-			//debug(t.screen, 2, 7, style, fmt.Sprintf("U cell: %v", p.GetVx()))
+			p.SetVx(t.fs.GetCell("u", x0, y0) * 200)
+			p.SetVy(t.fs.GetCell("v", x0, y0) * 200)
 
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
 			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '*', nil, tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack))
 
-			//debug(t.screen, 2, 5, style, fmt.Sprintf("Velocity: %v %v", p.GetX(), p.GetY()))
+			//debug(t.screen, 2, 2, termStyle, fmt.Sprintf("Particle: %v %v", p.GetX(), p.GetY()))
+			//debug(t.screen, 2, 3, termStyle, fmt.Sprintf("Velocity: %v %v", p.GetVx(), p.GetVy()))
 		}
-		//debug(t.screen, 2, 4, style, fmt.Sprintf("Particle: %v", alpha))
 
 		if p.GetDeath() {
 			// Remove dead particles, and update the length manually
