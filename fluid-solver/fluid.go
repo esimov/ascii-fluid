@@ -14,7 +14,7 @@ type fluidSolver struct {
 	viscosity   float64
 	iterations  int
 	doVorticity bool
-	doBouyancy  bool
+	doBuoyancy  bool
 	numOfCells  int
 
 	u cell
@@ -42,12 +42,12 @@ func NewSolver(n int) *FluidSolver {
 	fs := &FluidSolver{
 		nx:          n,
 		ny:          n,
-		dt:          0.1,
+		dt:          0.2,
 		diffusion:   0.0002,
 		viscosity:   0.0,
 		iterations:  10,
 		doVorticity: true,
-		doBouyancy:  true,
+		doBuoyancy:  true,
 	}
 	fs.numOfCells = (n + 2) * (n + 2)
 	fs.u = make(cell, fs.numOfCells)
@@ -123,7 +123,7 @@ func (fs *FluidSolver) VelocityStep() {
 		fs.addSource(fs.v, fs.vOld)
 	}
 
-	if fs.doBouyancy {
+	if fs.doBuoyancy {
 		fs.buoyancy(fs.vOld)
 		fs.addSource(fs.v, fs.vOld)
 	}
