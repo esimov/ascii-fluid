@@ -242,9 +242,6 @@ func (t *Terminal) update() {
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
 			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '▄', nil, termStyle)
-
-			//debug(t.screen, 2, 2, termStyle, fmt.Sprintf("Particle: %v %v", p.GetX(), p.GetY()))
-			//debug(t.screen, 2, 3, termStyle, fmt.Sprintf("Velocity: %v %v", p.GetVx(), p.GetVy()))
 		}
 
 		if p.GetDeath() {
@@ -253,35 +250,6 @@ func (t *Terminal) update() {
 		}
 	}
 	lastTime = time.Now()
-
-	// // Render fluid
-	// for i := 1; i <= numOfCells; i++ {
-	// 	// the x position of the current cell
-	// 	//dx := (float64(i) - 0.5) * float64(cellSize)
-
-	// 	for j := 1; j <= numOfCells; j++ {
-	// 		// the y position of the current cell
-	// 		//dy := (float64(j) - 0.5) * float64(cellSize)
-
-	// 		//density := t.fs.GetCell("d", i, j)
-	// 		if t.opts.drawDensityField {
-	// 			for l := 0; l < cellSize; l++ {
-	// 				for m := 0; m < cellSize; m++ {
-	// 					mx := (i-1)*cellSize + l
-	// 					my := (j-1)*cellSize + m
-	// 					//pxIdx := pxX + pxY*terminalSize*4
-
-	// 					attrf := func() (rune, termbox.Attribute, termbox.Attribute) {
-	// 						return '█', termbox.ColorDefault, termbox.ColorWhite
-	// 					}
-	// 					r, fg, bg := attrf()
-	// 					termbox.SetCell(mx, my, r, fg, bg)
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}
-	// }
 }
 
 func (t *Terminal) getDetectionResults() {
