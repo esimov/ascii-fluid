@@ -25,10 +25,9 @@ type Terminal struct {
 }
 
 type options struct {
-	drawVelocityField bool
-	drawDensityField  bool
-	drawParticles     bool
-	grayscale         bool
+	drawDensityField bool
+	drawParticles    bool
+	grayscale        bool
 }
 
 const (
@@ -52,8 +51,7 @@ var (
 	scanner *bufio.Scanner
 )
 
-var termStyle = tcell.StyleDefault.
-	Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
+var termStyle = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
 
 func init() {
 	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -67,10 +65,9 @@ func New() *Terminal {
 func (t *Terminal) Init() *Terminal {
 	var err error
 	t.opts = &options{
-		drawVelocityField: false,
-		drawDensityField:  true,
-		drawParticles:     true,
-		grayscale:         false,
+		drawDensityField: true,
+		drawParticles:    true,
+		grayscale:        false,
 	}
 
 	lastTime = time.Now()
@@ -217,10 +214,6 @@ func (t *Terminal) update() {
 	t.fs.VelocityStep()
 	t.fs.DensityStep()
 
-	if t.opts.drawVelocityField {
-		// TODO implement me
-	}
-
 	for i := 0; i < len(particles); i++ {
 		p := particles[i]
 		p.SetAge(float64(p.GetAge()) + dt)
@@ -236,8 +229,8 @@ func (t *Terminal) update() {
 			x0 := int(math.Abs(float64(p.GetX())/float64(termWidth))*numOfCells) + 2
 			y0 := int(math.Abs(float64(p.GetY())/float64(termHeight))*numOfCells) + 2
 
-			p.SetVx(t.fs.GetCell("u", x0, y0) * 100)
-			p.SetVy(t.fs.GetCell("v", x0, y0) * 100)
+			p.SetVx(t.fs.GetCell("u", x0, y0) * 50)
+			p.SetVy(t.fs.GetCell("v", x0, y0) * 50)
 
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
