@@ -25,6 +25,7 @@ type Terminal struct {
 }
 
 type options struct {
+	drawGrid         bool
 	drawDensityField bool
 	drawParticles    bool
 	grayscale        bool
@@ -51,7 +52,11 @@ var (
 	scanner *bufio.Scanner
 )
 
-var termStyle = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
+var (
+	termStyle = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
+	gridStyle = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.ColorBlack)
+	termChars = []rune{' ', '▄', '·', '~', '¢', 'c', '»', '¤', 'X', 'M', ' '}
+)
 
 func init() {
 	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -65,6 +70,7 @@ func New() *Terminal {
 func (t *Terminal) Init() *Terminal {
 	var err error
 	t.opts = &options{
+		drawGrid:         true,
 		drawDensityField: true,
 		drawParticles:    true,
 		grayscale:        false,
@@ -119,6 +125,9 @@ func (t *Terminal) Render() {
 					t.screen.Fini()
 					os.Exit(0)
 				}
+				if ev.Key() == tcell.KeyCtrlD {
+					t.opts.drawGrid = !t.opts.drawGrid
+				}
 			case *tcell.EventMouse:
 				mx, my = ev.Position()
 				t.onMouseMove(mx, my)
@@ -168,8 +177,6 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	du := float64(mouseX-oldMouseX) * 1.8
 	dv := float64(mouseY-oldMouseY) * 1.8
 
-	//debug(t.screen, 2, 3, termStyle, fmt.Sprintf("Velocity: %v, %v", du, dv))
-
 	// Add the mouse velocity to cells above, below, to the left, and to the right as well.
 	t.fs.SetCell("uOld", i, j, du)
 	t.fs.SetCell("vOld", i, j, dv)
@@ -214,6 +221,10 @@ func (t *Terminal) update() {
 	t.fs.VelocityStep()
 	t.fs.DensityStep()
 
+	if t.opts.drawGrid {
+		t.drawGrid()
+	}
+
 	for i := 0; i < len(particles); i++ {
 		p := particles[i]
 		p.SetAge(float64(p.GetAge()) + dt)
@@ -242,7 +253,33 @@ func (t *Terminal) update() {
 			particles = append(particles[:i], particles[i+1:]...)
 		}
 	}
+
+	// Render fluid
+	for i := 1; i <= numOfCells; i++ {
+		// the x position of the current cell
+		//dx := (float64(i) - 0.5) * float64(cellSize)
+
+		for j := 1; j <= numOfCells; j++ {
+			// the y position of the current cell
+			//dy := (float64(j) - 0.5) * float64(cellSize)
+
+			density := t.fs.GetCell("d", i, j)
+			debug(t.screen, 2, 4, termStyle, fmt.Sprintf("Density: %v", density))
+			debug(t.screen, 2, 5, termStyle, fmt.Sprintf("Position: %v  %v", i, j))
+		}
+	}
+	debug(t.screen, 2, 2, termStyle, fmt.Sprintf("Terminal: %v  %v", termWidth, termHeight))
+	debug(t.screen, 2, 3, termStyle, fmt.Sprintf("D Size: %v  ", t.fs.GetCellSize("d")))
+
 	lastTime = time.Now()
+}
+
+func (t *Terminal) drawGrid() {
+	for i := 0; i < termWidth; i++ {
+		for j := 0; j < termHeight; j++ {
+			t.screen.SetContent(i, j, '.', nil, gridStyle)
+		}
+	}
 }
 
 func (t *Terminal) getDetectionResults() {
