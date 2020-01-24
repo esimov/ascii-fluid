@@ -31,9 +31,14 @@ type options struct {
 	grayscale        bool
 }
 
+type agent struct {
+	x, y int
+}
+
 const (
 	numOfCells         = 32 // Number of cells (not including the boundary)
 	particleTimeToLive = 3
+	maxNumberOfAgents  = 10
 )
 
 var (
@@ -41,6 +46,7 @@ var (
 	lastTime time.Time
 
 	isMouseDown bool
+	isTabDown   bool
 	oldMouseX   int
 	oldMouseY   int
 
@@ -48,14 +54,15 @@ var (
 	termHeight int
 	cellSize   int
 	particles  []*fluid.Particle
+	agents     []agent
 
 	scanner *bufio.Scanner
 )
 
 var (
-	termStyle = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
-	gridStyle = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.ColorBlack)
-	termChars = []rune{' ', '▄', '·', '~', '¢', 'c', '»', '¤', 'X', 'M', ' '}
+	termStyle  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
+	agentStyle = tcell.StyleDefault.Foreground(tcell.ColorGreenYellow).Background(tcell.ColorBlack)
+	gridStyle  = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.ColorBlack)
 )
 
 func init() {
@@ -122,11 +129,13 @@ func (t *Terminal) Render() {
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyEscape {
 					close(quit)
-					t.screen.Fini()
-					os.Exit(0)
+					return
 				}
 				if ev.Key() == tcell.KeyCtrlD {
 					t.opts.drawGrid = !t.opts.drawGrid
+				}
+				if ev.Key() == tcell.KeyTAB && isMouseDown {
+					isTabDown = true
 				}
 			case *tcell.EventMouse:
 				mx, my = ev.Position()
@@ -137,6 +146,7 @@ func (t *Terminal) Render() {
 					isMouseDown = true
 				case tcell.ButtonNone:
 					isMouseDown = false
+					isTabDown = false
 				}
 			default:
 				go t.getDetectionResults()
@@ -149,18 +159,19 @@ loop:
 		select {
 		case <-quit:
 			break loop
-		default:
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				// Clear the screen
-				t.screen.Fill(' ', termStyle)
-				t.update()
-			}()
-			wg.Wait()
+		case <-time.After(time.Millisecond * 5):
 		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Clear the screen
+			t.screen.Fill(' ', termStyle)
+			t.update()
+		}()
+		wg.Wait()
 		t.screen.Show()
 	}
+	t.screen.Fini()
 }
 
 func (t *Terminal) onMouseMove(mouseX, mouseY int) {
@@ -174,8 +185,8 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	}
 
 	// Mouse velocity
-	du := float64(mouseX-oldMouseX) * 1.8
-	dv := float64(mouseY-oldMouseY) * 1.8
+	du := float64(mouseX-oldMouseX) * 1.5
+	dv := float64(mouseY-oldMouseY) * 1.5
 
 	// Add the mouse velocity to cells above, below, to the left, and to the right as well.
 	t.fs.SetCell("uOld", i, j, du)
@@ -210,6 +221,19 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 			particles = append(particles, p)
 		}
 	}
+
+	if isTabDown {
+		if i, ok := isAgentActive(agents, mouseX, mouseY); ok && i != -1 {
+			// remove agent
+			agents = append(agents[:i], agents[i+1:]...)
+		} else {
+			// add agent
+			if len(agents) < maxNumberOfAgents {
+				agents = append(agents, agent{x: mouseX, y: mouseY})
+			}
+		}
+	}
+
 	// Save current mouse position for next frame
 	oldMouseX = mouseX
 	oldMouseY = mouseY
@@ -230,7 +254,7 @@ func (t *Terminal) update() {
 		p.SetAge(float64(p.GetAge()) + dt)
 
 		alpha := float64(1 - p.GetAge()/particleTimeToLive)
-		debug(t.screen, 2, 1, termStyle, fmt.Sprintf("Alpha: %v", alpha))
+		//debug(t.screen, 2, 1, termStyle, fmt.Sprintf("Alpha: %v", alpha))
 		if alpha < 0.01 ||
 			p.GetAge() >= particleTimeToLive ||
 			p.GetX() <= 0.0 || p.GetX() >= float64(termWidth) ||
@@ -245,6 +269,19 @@ func (t *Terminal) update() {
 
 			p.SetX(float64(p.GetX() + p.GetVx()))
 			p.SetY(float64(p.GetY() + p.GetVy()))
+
+			// Apply a velocity factor to the existing agents
+			for i := 0; i < len(agents); i++ {
+				x0 := int(math.Abs(float64(agents[i].x)/float64(termWidth))*numOfCells) + 2
+				y0 := int(math.Abs(float64(agents[i].y)/float64(termHeight))*numOfCells) + 2
+
+				p.SetVx(t.fs.GetCell("u", x0, y0) * 10)
+				p.SetVy(t.fs.GetCell("v", x0, y0) * 10)
+
+				p.SetX(float64(p.GetX() + p.GetVx()))
+				p.SetY(float64(p.GetY() + p.GetVy()))
+
+			}
 			t.screen.SetContent(int(p.GetX()), int(p.GetY()), '▄', nil, termStyle)
 		}
 
@@ -254,22 +291,9 @@ func (t *Terminal) update() {
 		}
 	}
 
-	// Render fluid
-	for i := 1; i <= numOfCells; i++ {
-		// the x position of the current cell
-		//dx := (float64(i) - 0.5) * float64(cellSize)
-
-		for j := 1; j <= numOfCells; j++ {
-			// the y position of the current cell
-			//dy := (float64(j) - 0.5) * float64(cellSize)
-
-			density := t.fs.GetCell("d", i, j)
-			debug(t.screen, 2, 4, termStyle, fmt.Sprintf("Density: %v", density))
-			debug(t.screen, 2, 5, termStyle, fmt.Sprintf("Position: %v  %v", i, j))
-		}
+	for i := 0; i < len(agents); i++ {
+		t.drawAgent(agents[i].x, agents[i].y)
 	}
-	debug(t.screen, 2, 2, termStyle, fmt.Sprintf("Terminal: %v  %v", termWidth, termHeight))
-	debug(t.screen, 2, 3, termStyle, fmt.Sprintf("D Size: %v  ", t.fs.GetCellSize("d")))
 
 	lastTime = time.Now()
 }
@@ -280,6 +304,10 @@ func (t *Terminal) drawGrid() {
 			t.screen.SetContent(i, j, '.', nil, gridStyle)
 		}
 	}
+}
+
+func (t *Terminal) drawAgent(mx, my int) {
+	t.screen.SetContent(mx, my, tcell.RuneBlock, nil, agentStyle)
 }
 
 func (t *Terminal) getDetectionResults() {
@@ -306,6 +334,15 @@ func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {
 
 func random(rnd *rand.Rand, min, max int) float64 {
 	return float64(rnd.Intn(max-min) + min)
+}
+
+func isAgentActive(agents []agent, x, y int) (int, bool) {
+	for i, agent := range agents {
+		if agent.x == x && agent.y == y {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 func debug(s tcell.Screen, x, y int, style tcell.Style, str string) {
