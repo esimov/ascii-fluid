@@ -41,6 +41,11 @@ type Canvas struct {
 	ws js.Value
 }
 
+const (
+	canvasWidth  = 640
+	canvasHeight = 480
+)
+
 var det *detector.Detector
 
 // NewCanvas creates and initializes the new Canvas element
@@ -50,8 +55,8 @@ func NewCanvas() *Canvas {
 	c.doc = c.window.Get("document")
 	c.body = c.doc.Get("body")
 
-	c.windowSize.width = 640
-	c.windowSize.height = 480
+	c.windowSize.width = canvasWidth
+	c.windowSize.height = canvasHeight
 
 	c.canvas = c.doc.Call("createElement", "canvas")
 	c.canvas.Set("width", c.windowSize.width)

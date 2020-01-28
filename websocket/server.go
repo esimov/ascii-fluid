@@ -2,9 +2,9 @@ package websocket
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/gorilla/websocket"
@@ -16,7 +16,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type detection struct {
+type Detection struct {
 	X int `json:"row"`
 	Y int `json:"col"`
 }
@@ -27,13 +27,15 @@ type HttpParams struct {
 	Root    string
 }
 
-type Hub struct {
-	Message chan detection
+type hub struct {
+	coords chan Detection
 }
 
-var MsgHub = &Hub{
-	Message: make(chan detection),
+var detHub = &hub{
+	coords: make(chan Detection),
 }
+
+const JsonFile = "facedet.json"
 
 // Init initializes the webserver and websocket connection
 func Init(p *HttpParams) {
@@ -73,14 +75,13 @@ func readSocket(conn *websocket.Conn) {
 			}
 			return
 		}
-		det := &detection{}
-		err = json.Unmarshal([]byte(msg), det)
+		det := &Detection{}
+		err = json.Unmarshal(msg, det)
 		if err != nil {
 			log.Printf("error: %v", err)
 		}
 		log.Printf("received: X:%d Y:%d", det.X, det.Y)
-
-		MsgHub.Message <- *det
+		detHub.coords <- *det
 
 		if err := conn.WriteMessage(messageType, msg); err != nil {
 			log.Println(err)
@@ -89,9 +90,22 @@ func readSocket(conn *websocket.Conn) {
 	}
 }
 
+// writeDataStream writes the detection results into the destination file
+func writeDataStream(file *os.File, det Detection) error {
+	data, err := json.Marshal(det)
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(string(data) + "\n")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // wsHandler defines the websocket connection endpoint
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	//upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	// Upgrade the http connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -104,16 +118,29 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	go readSocket(conn)
 }
 
+// run runs the face detection event concurrently and writes
+// the detection results coordinates into the destination file
 func run() {
 	defer func() {
-		close(MsgHub.Message)
+		close(detHub.coords)
 	}()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	dir := filepath.Dir(wd)
+	f, err := os.Create(dir + "/" + JsonFile)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
 
 	for {
 		select {
-		case msg, ok := <-MsgHub.Message:
+		case det, ok := <-detHub.coords:
 			if ok {
-				fmt.Println("Result:", msg)
+				writeDataStream(f, det)
 			}
 		}
 	}

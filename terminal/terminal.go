@@ -2,8 +2,11 @@ package terminal
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"go/build"
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -36,9 +39,12 @@ type agent struct {
 }
 
 const (
-	numOfCells         = 32 // Number of cells (not including the boundary)
-	particleTimeToLive = 3
+	numOfCells         = 36 // Number of cells (not including the boundary)
+	particleTimeToLive = 8
 	maxNumberOfAgents  = 10
+
+	canvasWidth  = 640
+	canvasHeight = 480
 )
 
 var (
@@ -63,6 +69,8 @@ var (
 	termStyle  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
 	agentStyle = tcell.StyleDefault.Foreground(tcell.ColorGreenYellow).Background(tcell.ColorBlack)
 	gridStyle  = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.ColorBlack)
+
+	jsonFile = build.Default.GOPATH + "/src/github.com/esimov/ascii-fluid/" + websocket.JsonFile
 )
 
 func init() {
@@ -148,18 +156,24 @@ func (t *Terminal) Render() {
 					isMouseDown = false
 					isTabDown = false
 				}
-			default:
-				go t.getDetectionResults()
 			}
 		}
 	}()
+
+	f, err := os.Open(jsonFile)
+	if err != nil {
+		log.Fatalf("unable to open the json file %v", err)
+	}
+	defer f.Close()
+
+	lineIdx := 1
 
 loop:
 	for {
 		select {
 		case <-quit:
 			break loop
-		case <-time.After(time.Millisecond * 5):
+		case <-time.After(time.Millisecond * 10):
 		}
 		wg.Add(1)
 		go func() {
@@ -168,6 +182,19 @@ loop:
 			t.screen.Fill(' ', termStyle)
 			t.update()
 		}()
+
+		if line, err := t.readDataStream(f, int64(lineIdx)); err != io.EOF || err == nil {
+			det := &websocket.Detection{}
+			if err := json.Unmarshal(line, det); err == nil {
+				isMouseDown = true
+				posX := int((float64(termWidth) / float64(canvasWidth)) * float64(det.X))
+				posY := int((float64(termHeight) / float64(canvasHeight)) * float64(det.Y))
+
+				t.onMouseMove(posX, posY)
+			}
+			lineIdx++
+		}
+
 		wg.Wait()
 		t.screen.Show()
 	}
@@ -210,7 +237,7 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	}
 
 	if isMouseDown && t.opts.drawParticles {
-		for i := 0; i < 20; i++ {
+		for i := 0; i < 30; i++ {
 			p := fluid.NewParticle(
 				float64(mouseX)+random(rnd, -10, 10),
 				float64(mouseY)+random(rnd, -10, 10),
@@ -249,13 +276,14 @@ func (t *Terminal) update() {
 		t.drawGrid()
 	}
 
+	debug(t.screen, 2, 1, termStyle, fmt.Sprintf("W: %d H: %d", termWidth, termHeight))
 	for i := 0; i < len(particles); i++ {
 		p := particles[i]
 		p.SetAge(float64(p.GetAge()) + dt)
 
 		alpha := float64(1 - p.GetAge()/particleTimeToLive)
 		//debug(t.screen, 2, 1, termStyle, fmt.Sprintf("Alpha: %v", alpha))
-		if alpha < 0.01 ||
+		if alpha < 0.001 ||
 			p.GetAge() >= particleTimeToLive ||
 			p.GetX() <= 0.0 || p.GetX() >= float64(termWidth) ||
 			p.GetY() <= 0.0 || p.GetY() >= float64(termHeight) {
@@ -275,8 +303,8 @@ func (t *Terminal) update() {
 				x0 := int(math.Abs(float64(agents[i].x)/float64(termWidth))*numOfCells) + 2
 				y0 := int(math.Abs(float64(agents[i].y)/float64(termHeight))*numOfCells) + 2
 
-				p.SetVx(t.fs.GetCell("u", x0, y0) * 10)
-				p.SetVy(t.fs.GetCell("v", x0, y0) * 10)
+				p.SetVx(t.fs.GetCell("u", x0, y0) * 5)
+				p.SetVy(t.fs.GetCell("v", x0, y0) * 5)
 
 				p.SetX(float64(p.GetX() + p.GetVx()))
 				p.SetY(float64(p.GetY() + p.GetVy()))
@@ -310,22 +338,27 @@ func (t *Terminal) drawAgent(mx, my int) {
 	t.screen.SetContent(mx, my, tcell.RuneBlock, nil, agentStyle)
 }
 
-func (t *Terminal) getDetectionResults() {
-	defer func() {
-		close(websocket.MsgHub.Message)
-	}()
+// readDataStream reads the detection results from file
+func (t *Terminal) readDataStream(file *os.File, lineNum int64) ([]byte, error) {
+	if lineNum < 1 {
+		return nil, fmt.Errorf("invalid request: line %d", lineNum)
+	}
+	if _, err := file.Seek(lineNum, 0); err != nil {
+		return nil, err
+	}
+	scanner := bufio.NewScanner(file)
 
-	for {
-		fmt.Println(websocket.TestVar)
-		fmt.Println(<-websocket.MsgHub.Message)
-		select {
-		case msg, ok := <-websocket.MsgHub.Message:
-			if !ok {
-				fmt.Println("closed")
-			}
-			fmt.Println(msg)
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		advance, token, err = bufio.ScanLines(data, atEOF)
+		return
+	})
+
+	for i := 0; i < int(lineNum); i++ {
+		if !scanner.Scan() {
+			return nil, io.EOF
 		}
 	}
+	return scanner.Bytes(), scanner.Err()
 }
 
 func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {
