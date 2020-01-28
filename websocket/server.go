@@ -80,7 +80,7 @@ func readSocket(conn *websocket.Conn) {
 		if err != nil {
 			log.Printf("error: %v", err)
 		}
-		log.Printf("received: X:%d Y:%d", det.X, det.Y)
+
 		detHub.coords <- *det
 
 		if err := conn.WriteMessage(messageType, msg); err != nil {

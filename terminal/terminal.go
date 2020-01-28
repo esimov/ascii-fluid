@@ -136,6 +136,7 @@ func (t *Terminal) Render() {
 				t.screen.Sync()
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyEscape {
+					os.Remove(jsonFile)
 					close(quit)
 					return
 				}
@@ -276,7 +277,6 @@ func (t *Terminal) update() {
 		t.drawGrid()
 	}
 
-	debug(t.screen, 2, 1, termStyle, fmt.Sprintf("W: %d H: %d", termWidth, termHeight))
 	for i := 0; i < len(particles); i++ {
 		p := particles[i]
 		p.SetAge(float64(p.GetAge()) + dt)

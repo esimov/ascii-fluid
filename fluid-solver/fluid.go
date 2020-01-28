@@ -43,7 +43,7 @@ func NewSolver(n int) *FluidSolver {
 		nx:          n,
 		ny:          n,
 		dt:          0.2,
-		diffusion:   0.0002,
+		diffusion:   0.0001,
 		viscosity:   0.0,
 		iterations:  10,
 		doVorticity: true,
