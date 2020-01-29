@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"go/build"
 	"io"
-	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -161,10 +160,7 @@ func (t *Terminal) Render() {
 		}
 	}()
 
-	f, err := os.Open(jsonFile)
-	if err != nil {
-		log.Fatalf("unable to open the json file %v", err)
-	}
+	f, _ := os.Open(jsonFile)
 	defer f.Close()
 
 	lineIdx := 1
