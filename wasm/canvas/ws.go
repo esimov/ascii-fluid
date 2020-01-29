@@ -6,6 +6,7 @@ import (
 	"github.com/esimov/ascii-fluid/websocket"
 )
 
+// InitWebSocket initializes the frontend websocket connection.
 func (c *Canvas) InitWebSocket() {
 	webSocketParams := websocket.GetParams()
 	c.ws = js.Global().Get("WebSocket").New("ws://" + webSocketParams.Address + "/ws")
@@ -33,6 +34,7 @@ func (c *Canvas) InitWebSocket() {
 	c.ws.Call("addEventListener", "error", errorCallback)
 }
 
+// send transfer the value trough the socket.
 func (c *Canvas) send(value string) {
 	c.ws.Call("send", value)
 }

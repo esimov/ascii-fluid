@@ -22,7 +22,7 @@ import (
 type Terminal struct {
 	screen tcell.Screen
 	fn     string
-	fs     *fluid.FluidSolver
+	fs     *fluid.Solver
 	opts   *options
 }
 
