@@ -54,10 +54,10 @@ func (d *Detector) UnpackCascades() error {
 		return errors.New("error unpacking the puploc cascade file")
 	}
 
-	flpcs, err = d.parseFlpCascades("https://raw.githubusercontent.com/esimov/pigo/master/cascade/lps/")
-	if err != nil {
-		return errors.New("error unpacking the facial landmark points detection cascades")
-	}
+	// flpcs, err = d.parseFlpCascades("https://raw.githubusercontent.com/esimov/pigo/master/cascade/lps/")
+	// if err != nil {
+	// 	return errors.New("error unpacking the facial landmark points detection cascades")
+	// }
 	return nil
 }
 
