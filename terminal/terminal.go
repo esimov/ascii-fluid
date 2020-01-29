@@ -132,6 +132,7 @@ func (t *Terminal) Render() {
 
 			switch ev := ev.(type) {
 			case *tcell.EventResize:
+				termWidth, termHeight = t.screen.Size()
 				t.screen.Sync()
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyEscape {
