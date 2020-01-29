@@ -1,3 +1,6 @@
+// The fluid solver implementation is largely based on Jos Stam's paper "Real-Time Fluid Dynamics for Games".
+// @link http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf
+
 package fluid
 
 import (
@@ -6,7 +9,7 @@ import (
 
 type cell []float64
 
-type fluidSolver struct {
+type solver struct {
 	nx          int
 	ny          int
 	dt          float64
@@ -28,6 +31,7 @@ type fluidSolver struct {
 	curlData cell
 }
 
+// BoundaryType is a type alias for int
 type BoundaryType int
 
 const (
@@ -36,10 +40,13 @@ const (
 	BoundaryTopBottom
 )
 
-type FluidSolver fluidSolver
+// Solver is a global alias to solver for using outside of this package.
+type Solver solver
 
-func NewSolver(n int) *FluidSolver {
-	fs := &FluidSolver{
+// NewSolver defines the fluid solver general parameters, where {n} is the
+// number of fluid cells for the simulation grid in each dimension (NxN)
+func NewSolver(n int) *Solver {
+	fs := &Solver{
 		nx:          n,
 		ny:          n,
 		dt:          0.2,
@@ -63,7 +70,8 @@ func NewSolver(n int) *FluidSolver {
 	return fs
 }
 
-func (fs *FluidSolver) SetCell(cellType interface{}, x, y int, val float64) {
+// SetCell sets the cell value of different types.
+func (fs *Solver) SetCell(cellType interface{}, x, y int, val float64) {
 	switch cellType {
 	case "u":
 		fs.u[fs.idx(x, y)] = val
@@ -80,7 +88,8 @@ func (fs *FluidSolver) SetCell(cellType interface{}, x, y int, val float64) {
 	}
 }
 
-func (fs *FluidSolver) GetCell(cellType interface{}, x, y int) (result float64) {
+// GetCell gets the cell value of different types.
+func (fs *Solver) GetCell(cellType interface{}, x, y int) (result float64) {
 	switch cellType {
 	case "u":
 		result = fs.u[fs.idx(x, y)]
@@ -98,7 +107,8 @@ func (fs *FluidSolver) GetCell(cellType interface{}, x, y int) (result float64) 
 	return
 }
 
-func (fs *FluidSolver) DensityStep() {
+// DensityStep calculates the density step.
+func (fs *Solver) DensityStep() {
 	fs.addSource(fs.d, fs.dOld)
 
 	fs.swapD()
@@ -113,7 +123,8 @@ func (fs *FluidSolver) DensityStep() {
 	}
 }
 
-func (fs *FluidSolver) VelocityStep() {
+// VelocityStep calculates the velocity step.
+func (fs *Solver) VelocityStep() {
 	fs.addSource(fs.u, fs.uOld)
 	fs.addSource(fs.v, fs.vOld)
 
@@ -150,13 +161,15 @@ func (fs *FluidSolver) VelocityStep() {
 	}
 }
 
-func (fs *FluidSolver) ResetDensity() {
+// ResetDensity resets the density cells.
+func (fs *Solver) ResetDensity() {
 	for i := 0; i < fs.numOfCells; i++ {
 		fs.d[i] = 0
 	}
 }
 
-func (fs *FluidSolver) ResetVelocity() {
+// ResetVelocity resets the velocity cells.
+func (fs *Solver) ResetVelocity() {
 	for i := 0; i < fs.numOfCells; i++ {
 		// Set a small value so we can render the velocity field
 		fs.v[i] = 0.001
@@ -164,38 +177,44 @@ func (fs *FluidSolver) ResetVelocity() {
 	}
 }
 
-func (fs *FluidSolver) swapU() {
+// swapU swaps velocity x reference.
+func (fs *Solver) swapU() {
 	tmp := fs.u
 	fs.u = fs.uOld
 	fs.uOld = tmp
 }
 
-func (fs *FluidSolver) swapV() {
+// swapU swaps velocity y reference.
+func (fs *Solver) swapV() {
 	tmp := fs.v
 	fs.v = fs.vOld
 	fs.vOld = tmp
 }
 
-func (fs *FluidSolver) swapD() {
+// swapU swaps density reference.
+func (fs *Solver) swapD() {
 	tmp := fs.d
 	fs.d = fs.dOld
 	fs.dOld = tmp
 }
 
-func (fs *FluidSolver) addSource(x, s cell) {
+// addSource integrates the density sources.
+func (fs *Solver) addSource(x, s cell) {
 	for i := 0; i < fs.numOfCells; i++ {
 		x[i] += s[i] * fs.dt
 	}
 }
 
-func (fs *FluidSolver) curl(i, j int) float64 {
+// curls calculates the curl at cell (i, j).
+func (fs *Solver) curl(i, j int) float64 {
 	duDy := fs.u[fs.idx(i, j+1)] - fs.u[fs.idx(i, j-1)]*0.5
 	dvDx := fs.v[fs.idx(i+1, j)] - fs.v[fs.idx(i-1, j)]*0.5
 
 	return duDy - dvDx
 }
 
-func (fs *FluidSolver) calcVorticityConfinement(x, y cell) {
+// calcVorticityConfinement calculates the vorticity confinement force for each cell.
+func (fs *Solver) calcVorticityConfinement(x, y cell) {
 	var (
 		i, j            int
 		dx, dy, norm, v float64
@@ -206,7 +225,6 @@ func (fs *FluidSolver) calcVorticityConfinement(x, y cell) {
 			// Calculate the magnitude of curl(i, j) for each cell
 			fs.curlData[fs.idx(i, j)] = math.Abs(fs.curl(i, j))
 
-			// Calculate the derivative of the magnitude (n = del |w|)
 			dx = fs.curlData[fs.idx(i+1, j)] - fs.curlData[fs.idx(i-1, j)]*0.5
 			dy = fs.curlData[fs.idx(i, j+1)] - fs.curlData[fs.idx(i, j-1)]*0.5
 
@@ -226,7 +244,8 @@ func (fs *FluidSolver) calcVorticityConfinement(x, y cell) {
 	}
 }
 
-func (fs *FluidSolver) buoyancy(buoy cell) cell {
+// buoyancy calculates the buoyancy force for the grid.
+func (fs *Solver) buoyancy(buoy cell) cell {
 	var (
 		i, j int
 		tAmb float64
@@ -251,12 +270,13 @@ func (fs *FluidSolver) buoyancy(buoy cell) cell {
 	return buoy
 }
 
-func (fs *FluidSolver) diffuse(bound BoundaryType, x, x0 cell, diffusion float64) {
+// diffuse diffuses the density between neighbouring cells.
+func (fs *Solver) diffuse(bound BoundaryType, x, x0 cell, diffusion float64) {
 	a := fs.dt * diffusion * float64(fs.nx*fs.ny)
 	fs.linearSolve(bound, x, x0, a, 1.0+4.0*a)
 }
 
-func (fs *FluidSolver) linearSolve(bound BoundaryType, x, x0 cell, a, c float64) {
+func (fs *Solver) linearSolve(bound BoundaryType, x, x0 cell, a, c float64) {
 	invC := 1.0 / c
 
 	for k := 0; k < fs.iterations; k++ {
@@ -269,7 +289,8 @@ func (fs *FluidSolver) linearSolve(bound BoundaryType, x, x0 cell, a, c float64)
 	}
 }
 
-func (fs *FluidSolver) project(u, v, p, div cell) {
+// project solves the Poisson Equation.
+func (fs *Solver) project(u, v, p, div cell) {
 	// Calculate the gradient field
 	h := 1.0 / float64(fs.ny)
 	for i := 1; i <= fs.nx; i++ {
@@ -295,7 +316,8 @@ func (fs *FluidSolver) project(u, v, p, div cell) {
 	fs.setBoundary(BoundaryTopBottom, v)
 }
 
-func (fs *FluidSolver) advect(bound BoundaryType, d, d0, u, v cell) {
+// advect moves the density through the static velocity field.
+func (fs *Solver) advect(bound BoundaryType, d, d0, u, v cell) {
 	var (
 		i, j, i0, j0, i1, j1 int
 		x, y, s0, t0, s1, t1 float64
@@ -337,7 +359,8 @@ func (fs *FluidSolver) advect(bound BoundaryType, d, d0, u, v cell) {
 	fs.setBoundary(bound, d)
 }
 
-func (fs *FluidSolver) setBoundary(bound BoundaryType, x cell) {
+// setBoundary sets the boundary conditions.
+func (fs *Solver) setBoundary(bound BoundaryType, x cell) {
 	for i := 1; i <= fs.nx; i++ {
 		if bound == BoundaryLeftRight {
 			x[fs.idx(0, i)] = -x[fs.idx(1, i)]
@@ -364,6 +387,7 @@ func (fs *FluidSolver) setBoundary(bound BoundaryType, x cell) {
 	x[fs.idx(fs.nx+1, fs.ny+1)] = 0.5 * (x[fs.idx(fs.nx, fs.ny+1)] + x[fs.idx(fs.nx+1, fs.ny)])
 }
 
-func (fs *FluidSolver) idx(i, j int) int {
+// idx returns the cell's index (position).
+func (fs *Solver) idx(i, j int) int {
 	return i + (fs.ny+2)*j
 }
