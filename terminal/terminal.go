@@ -41,6 +41,8 @@ const (
 	numOfCells         = 36 // Number of cells (not including the boundary)
 	particleTimeToLive = 8
 	maxNumberOfAgents  = 10
+	distanceThreshold  = 80
+	tickerResetTime    = 2
 
 	canvasWidth  = 640
 	canvasHeight = 480
@@ -122,6 +124,11 @@ func (t *Terminal) Init() *Terminal {
 }
 
 func (t *Terminal) Render() {
+	var (
+		start      time.Time
+		dx, dy     float64
+		curx, cury int
+	)
 	wg := sync.WaitGroup{}
 	mx, my := -1, -1
 
@@ -166,12 +173,17 @@ func (t *Terminal) Render() {
 
 	lineIdx := 1
 
+	// Sends to the channel every 3s
+	tick := time.NewTicker(time.Second * tickerResetTime).C
+
 loop:
 	for {
 		select {
 		case <-quit:
 			break loop
 		case <-time.After(time.Millisecond * 10):
+		case <-tick:
+			start = time.Now()
 		}
 		wg.Add(1)
 		go func() {
@@ -184,7 +196,14 @@ loop:
 		if line, err := t.readDataStream(f, int64(lineIdx)); err != io.EOF || err == nil {
 			det := &websocket.Detection{}
 			if err := json.Unmarshal(line, det); err == nil {
-				isMouseDown = true
+				dt := time.Since(start).Seconds()
+				if dt > tickerResetTime {
+					curx, cury = det.X, det.Y
+				}
+				dx, dy = math.Abs(float64(det.X-curx)), math.Abs(float64(det.Y-cury))
+				if int(dx) > distanceThreshold || int(dy) > distanceThreshold {
+					isMouseDown = true
+				}
 				posX := int((float64(termWidth) / float64(canvasWidth)) * float64(det.X))
 				posY := int((float64(termHeight) / float64(canvasHeight)) * float64(det.Y))
 
@@ -279,7 +298,6 @@ func (t *Terminal) update() {
 		p.SetAge(float64(p.GetAge()) + dt)
 
 		alpha := float64(1 - p.GetAge()/particleTimeToLive)
-		//debug(t.screen, 2, 1, termStyle, fmt.Sprintf("Alpha: %v", alpha))
 		if alpha < 0.001 ||
 			p.GetAge() >= particleTimeToLive ||
 			p.GetX() <= 0.0 || p.GetX() >= float64(termWidth) ||
