@@ -48,7 +48,7 @@ const (
 
 var det *detector.Detector
 
-// NewCanvas creates and initializes the new Canvas element
+// NewCanvas creates and initializes a new canvas element
 func NewCanvas() *Canvas {
 	var c Canvas
 	c.window = js.Global()

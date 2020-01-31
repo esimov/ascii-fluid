@@ -19,13 +19,15 @@ import (
 	runewidth "github.com/mattn/go-runewidth"
 )
 
+// Terminal is the main entry struct for the terminal based operation.
+// It is also the communication bridge between the terminal and the fluid solver.
 type Terminal struct {
 	screen tcell.Screen
-	fn     string
 	fs     *fluid.Solver
 	opts   *options
 }
 
+// options holds the fluid simulation parameters
 type options struct {
 	drawGrid         bool
 	drawDensityField bool
@@ -78,11 +80,13 @@ func init() {
 	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
+// New creates a new terminal.
 func New() *Terminal {
 	t := new(Terminal)
 	return t
 }
 
+// Init initializes the terminal.
 func (t *Terminal) Init() *Terminal {
 	var err error
 	t.opts = &options{
@@ -123,6 +127,8 @@ func (t *Terminal) Init() *Terminal {
 	return t
 }
 
+// Render runs the fluid simulation in terminal, updates the screen periodically,
+// handles the mouse and key events and also draws and updates the fluid particles.
 func (t *Terminal) Render() {
 	var (
 		start      time.Time
@@ -266,8 +272,9 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 		}
 	}
 
+	// draw the fluid agents in case the tab key is pressed.
 	if isTabDown {
-		if i, ok := isAgentActive(agents, mouseX, mouseY); ok && i != -1 {
+		if i, ok := t.isAgentActive(agents, mouseX, mouseY); ok && i != -1 {
 			// remove agent
 			agents = append(agents[:i], agents[i+1:]...)
 		} else {
@@ -341,6 +348,7 @@ func (t *Terminal) update() {
 	lastTime = time.Now()
 }
 
+// drawGrid draws the fluid grid.
 func (t *Terminal) drawGrid() {
 	for i := 0; i < termWidth; i++ {
 		for j := 0; j < termHeight; j++ {
@@ -349,6 +357,7 @@ func (t *Terminal) drawGrid() {
 	}
 }
 
+// drawAgent draws an agent at {x, y} position.
 func (t *Terminal) drawAgent(mx, my int) {
 	t.screen.SetContent(mx, my, tcell.RuneBlock, nil, agentStyle)
 }
@@ -376,15 +385,8 @@ func (t *Terminal) readDataStream(file *os.File, lineNum int64) ([]byte, error) 
 	return scanner.Bytes(), scanner.Err()
 }
 
-func (t *Terminal) log(f io.Writer, format string, vals ...interface{}) {
-	fmt.Fprintf(f, format, vals...)
-}
-
-func random(rnd *rand.Rand, min, max int) float64 {
-	return float64(rnd.Intn(max-min) + min)
-}
-
-func isAgentActive(agents []agent, x, y int) (int, bool) {
+// isAgentActive verifies if an agent at {x, y} position is visible or not.
+func (t *Terminal) isAgentActive(agents []agent, x, y int) (int, bool) {
 	for i, agent := range agents {
 		if agent.x == x && agent.y == y {
 			return i, true
@@ -393,6 +395,12 @@ func isAgentActive(agents []agent, x, y int) (int, bool) {
 	return -1, false
 }
 
+// random generates a random float number between min and max.
+func random(rnd *rand.Rand, min, max int) float64 {
+	return float64(rnd.Intn(max-min) + min)
+}
+
+// debug is a helper method for printing out various information straight in the terminal.
 func debug(s tcell.Screen, x, y int, style tcell.Style, str string) {
 	for _, c := range str {
 		var comb []rune
