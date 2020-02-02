@@ -12,8 +12,7 @@ The fluid solver implementation is mainly based on Jos Stam's paper [Real-Time F
 
 ```bash
  $ go get -u -v github.com/esimov/ascii-fluid
- $ cd wasm
- $ make
+ $ cd wasm & make
 ```
 
 This will start three new operation simultaneously: it will open a new terminal window, starts a new web server for listening the websocket connection and will build a webassembly interface for accessing the webcam. The [Pigo](https://github.com/esimov/pigo) face detection library is used to detect the webcam face and transfer the face coordinates trough the socket to the main terminal app. On each refresh rate (defined as a parameter) the terminal will update the fluid particles.
@@ -23,8 +22,6 @@ This will start three new operation simultaneously: it will open a new terminal 
 - https://github.com/gdamore/tcell
 - https://github.com/esimov/pigo
 - https://github.com/gorilla/websocket
-
-
 
 ## Author
 
