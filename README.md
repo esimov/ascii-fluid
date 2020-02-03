@@ -6,7 +6,7 @@
 
 ## How it's working?
 
-The fluid solver implementation is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf). The fluid dynamics are rendered in terminal with the help of [tcell](https://github.com/gdamore/tcell) terminal package.
+The fluid solver implementation is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](https://pdfs.semanticscholar.org/847f/819a4ea14bd789aca8bc88e85e906cfc657c.pdf). The fluid dynamics are rendered in terminal with the help of [tcell](https://github.com/gdamore/tcell) terminal package.
 
 ## Usage
 
