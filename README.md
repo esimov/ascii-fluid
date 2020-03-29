@@ -1,12 +1,12 @@
 # ascii-fluid
 
-**`ascii-fluid`** is a webcam (face) controlled terminal based ASCII fluid simulation running in your terminal. You can control the fluid dynamics with your computer mouse/touchpad but also with your face. 
+**`ascii-fluid`** is a webcam (face) controlled ASCII fluid simulation running in your terminal. You can control the fluid dynamics with your computer mouse/touchpad but also with your face trough a webcam. 
 
 ![ascii-fluid](https://user-images.githubusercontent.com/883386/73605776-2b83bf00-45ab-11ea-93d1-ad6b2a6010e7.gif)
 
-## How it's working?
+## How it is working?
 
-The fluid solver implementation is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](https://pdfs.semanticscholar.org/847f/819a4ea14bd789aca8bc88e85e906cfc657c.pdf). The fluid dynamics are rendered in terminal with the help of [tcell](https://github.com/gdamore/tcell) terminal package.
+The fluid solver is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](https://pdfs.semanticscholar.org/847f/819a4ea14bd789aca8bc88e85e906cfc657c.pdf). This project is using [tcell](https://github.com/gdamore/tcell) library for rendering the fluid simulation in terminal.
 
 ## Usage
 
