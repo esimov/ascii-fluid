@@ -35,7 +35,6 @@ type Canvas struct {
 
 	showPupil  bool
 	drawCircle bool
-	flploc     bool
 
 	// Websocket
 	ws js.Value
@@ -65,9 +64,8 @@ func NewCanvas() *Canvas {
 	c.body.Call("appendChild", c.canvas)
 
 	c.ctx = c.canvas.Call("getContext", "2d")
-	c.showPupil = true
+	c.showPupil = false
 	c.drawCircle = false
-	c.flploc = false
 
 	det = detector.NewDetector()
 
@@ -229,19 +227,6 @@ func (c *Canvas) drawDetection(dets [][]int) {
 					c.ctx.Call("arc", col, row, scale, 0, 2*math.Pi, true)
 				}
 				c.ctx.Call("stroke")
-
-				if c.flploc {
-					flps := det.DetectLandmarkPoints(leftPupil, rightPupil)
-
-					c.ctx.Call("beginPath")
-					c.ctx.Set("fillStyle", "rgb(0, 255, 0)")
-					for _, flp := range flps {
-						col, row, scale = flp[1], flp[0], flp[2]/7
-						c.ctx.Call("moveTo", row+flp[2]/7, col)
-						c.ctx.Call("arc", row, col, scale, 0, 2*math.Pi, false)
-					}
-					c.ctx.Call("fill")
-				}
 			}
 		}
 	}
@@ -256,8 +241,6 @@ func (c *Canvas) detectKeyPress() {
 			c.showPupil = !c.showPupil
 		case keyCode.String() == "c":
 			c.drawCircle = !c.drawCircle
-		case keyCode.String() == "f":
-			c.flploc = !c.flploc
 		default:
 			c.drawCircle = false
 		}
