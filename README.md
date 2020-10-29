@@ -1,6 +1,6 @@
 # ascii-fluid
 
-**`ascii-fluid`** is a webcam (face) controlled terminal based ASCII fluid simulation running in your terminal. You can control the fluid dynamics with your computer mouse/touchpad but also with your face. 
+**`ascii-fluid`** is a webcam (face) controlled terminal based ASCII fluid simulation running in your terminal. You can control the fluid dynamics with your computer mouse/touchpad but also with your face.
 
 ![ascii-fluid](https://user-images.githubusercontent.com/883386/73605776-2b83bf00-45ab-11ea-93d1-ad6b2a6010e7.gif)
 
@@ -15,7 +15,7 @@ The fluid solver implementation is mainly based on Jos Stam's paper [Real-Time F
  $ cd wasm & make
 ```
 
-This will start three new operation simultaneously: it will open a new terminal window, starts a new web server for listening the websocket connection and will build a webassembly interface for accessing the webcam. The [Pigo](https://github.com/esimov/pigo) face detection library is used to detect the webcam face and transfer the face coordinates trough the socket to the main terminal app. On each refresh rate (defined as a parameter) the terminal will update the fluid particles.
+This will start three new operation simultaneously: it will open a new terminal window, starts a new web server for listening the websocket connection and will build a webassembly interface for accessing the webcam. The [Pigo](https://github.com/esimov/pigo) face detection library is used to detect the webcam face and transfer the face coordinates through the socket to the main terminal app. On each refresh rate (defined as a parameter) the terminal will update the fluid particles.
 
 ## Libraries used
 

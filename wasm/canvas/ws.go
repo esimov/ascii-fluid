@@ -34,7 +34,7 @@ func (c *Canvas) InitWebSocket() {
 	c.ws.Call("addEventListener", "error", errorCallback)
 }
 
-// send transfer the value trough the socket.
+// send transfer the value through the socket.
 func (c *Canvas) send(value string) {
 	c.ws.Call("send", value)
 }
