@@ -2,10 +2,12 @@ package terminal
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"go/build"
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -150,6 +152,11 @@ func (t *Terminal) Render() {
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyEscape {
 					os.Remove(jsonFile)
+					// We received an interrupt signal, shut down.
+					if err := websocket.HttpServer.Shutdown(context.Background()); err != nil {
+						// Error from closing listeners, or context timeout:
+						log.Printf("HTTP server Shutdown: %v", err)
+					}
 					close(quit)
 					return
 				}

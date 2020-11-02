@@ -10,12 +10,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// A server application calls the Upgrade method from an HTTP request handler to initiate a connection
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 type Detection struct {
 	X int `json:"row"`
 	Y int `json:"col"`
@@ -30,6 +24,14 @@ type HttpParams struct {
 type hub struct {
 	coords chan Detection
 }
+
+// A server application calls the Upgrade method from an HTTP request handler to initiate a connection
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+var HttpServer http.Server
 
 var detHub = &hub{
 	coords: make(chan Detection),
@@ -51,11 +53,15 @@ func Init(p *HttpParams) {
 	http.HandleFunc("/ws", wsHandler)
 
 	mux := http.DefaultServeMux.ServeHTTP
-	logger := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Print(r.RemoteAddr + " " + r.Method + " " + r.URL.String())
 		mux(w, r)
 	})
-	err = http.ListenAndServe(p.Address, logger)
+	HttpServer = http.Server{
+		Addr:    p.Address,
+		Handler: handler,
+	}
+	err = HttpServer.ListenAndServe()
 	if err != nil {
 		log.Fatalln(err)
 	}
