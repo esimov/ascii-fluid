@@ -12,6 +12,7 @@ else
 		BROWSER = open
 		COMMAND = osascript -e 'tell app "Terminal" to do script "go run $(PARENTDIR)/main.go"'
 	endif
+	JSDIR = $(PARENTDIR)/wasm/js
 endif
 
 .PHONY: all clean serve
@@ -19,11 +20,12 @@ endif
 all: wasm terminal serve
 
 wasm:
+	[ -d $(JSDIR) ] || mkdir -p $(JSDIR)
+	cp -f "$$(go env GOROOT)/misc/wasm/wasm_exec.js" $(JSDIR)
 	GOOS=js GOARCH=wasm go build -o lib.wasm wasm.go
 
 serve:
 	$(BROWSER) 'http://localhost:5000'
-	#serve
 	go run $(PARENTDIR)/server/main.go
 
 terminal:

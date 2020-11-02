@@ -1,3 +1,4 @@
 wasm/lib.wasm
+wasm/js/wasm_exec.js
 *.log
 *.json
