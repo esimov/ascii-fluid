@@ -31,7 +31,7 @@ var (
 func (d *Detector) UnpackCascades() error {
 	p := pigo.NewPigo()
 
-	cascade, err = d.FetchCascade("https://raw.githubusercontent.com/esimov/pigo/master/cascade/facefinder")
+	cascade, err = d.ParseCascade("/cascade/facefinder")
 	if err != nil {
 		return errors.New("error reading the facefinder cascade file")
 	}
@@ -44,7 +44,7 @@ func (d *Detector) UnpackCascades() error {
 
 	plc := pigo.NewPuplocCascade()
 
-	puplocCascade, err = d.FetchCascade("https://raw.githubusercontent.com/esimov/pigo/master/cascade/puploc")
+	puplocCascade, err = d.ParseCascade("/cascade/puploc")
 	if err != nil {
 		return errors.New("error reading the puploc cascade file")
 	}
@@ -53,11 +53,6 @@ func (d *Detector) UnpackCascades() error {
 	if err != nil {
 		return errors.New("error unpacking the puploc cascade file")
 	}
-
-	// flpcs, err = d.parseFlpCascades("https://raw.githubusercontent.com/esimov/pigo/master/cascade/lps/")
-	// if err != nil {
-	// 	return errors.New("error unpacking the facial landmark points detection cascades")
-	// }
 	return nil
 }
 
@@ -177,7 +172,7 @@ func (d *Detector) parseFlpCascades(path string) (map[string][]*FlpCascade, erro
 	pl := pigo.NewPuplocCascade()
 
 	for _, cascade := range cascades {
-		puplocCascade, err = d.FetchCascade(path + cascade)
+		puplocCascade, err = d.ParseCascade(path + cascade)
 		if err != nil {
 			d.Log("Error reading the cascade file: %v", err)
 		}
