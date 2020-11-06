@@ -3,7 +3,7 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME := $(shell uname -s)
 	PARENTDIR := $(shell dirname "$$PWD")
-
+	JSDIR = $(PARENTDIR)/wasm/js
 	ifeq ($(UNAME), Linux)
 		BROWSER = xdg-open
 		COMMAND = gnome-terminal --tab --command="bash -c 'go run $(PARENTDIR)/main.go; $(SHELL)'"
@@ -12,7 +12,6 @@ else
 		BROWSER = open
 		COMMAND = osascript -e 'tell app "Terminal" to do script "go run $(PARENTDIR)/main.go"'
 	endif
-	JSDIR = $(PARENTDIR)/wasm/js
 endif
 
 .PHONY: all clean serve

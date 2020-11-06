@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	websocket.InitServer()
+	websocket.Init(websocket.GetParams())
 }

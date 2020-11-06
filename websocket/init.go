@@ -6,10 +6,6 @@ var ws = &HttpParams{
 	Root:    ".",
 }
 
-func InitServer() {
-	Init(ws)
-}
-
 func GetParams() *HttpParams {
 	return ws
 }
