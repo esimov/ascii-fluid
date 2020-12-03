@@ -1,4 +1,4 @@
-# ascii-fluid
+# 🌊 ascii-fluid
 
 **ascii-fluid** is a webcam (face) controlled ASCII fluid simulation running in your terminal. You can control the fluid dynamics with your computer mouse/touchpad but also with your face trough a webcam.
 
