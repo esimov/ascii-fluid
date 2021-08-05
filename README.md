@@ -22,6 +22,16 @@ This will start three new operation simultaneously:
 
 The coordinates of the first detected face will be transferred over the websocket connection to the terminal application. On each refresh rate (defined as a parameter) the terminal will update the fluid simulation.
 
+## OS Support
+**This program has been tested on Linux and MacOS, but normally it should also run on Windows.**
+
+Because of the OS imposed security constrains there are some important steps you need to take:
+
+#### MacOS:
+In MacOS you must set the accessibility authorization for the terminal you are running from.
+
+<img src="https://user-images.githubusercontent.com/705503/80077645-11c09b00-854e-11ea-8b52-ad130b42028b.png" width=300/>
+
 ## Libraries used
 
 - https://github.com/gdamore/tcell
