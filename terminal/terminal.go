@@ -5,11 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go/build"
-	"io"
 	"log"
 	"math"
 	"math/rand"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -34,7 +33,6 @@ type options struct {
 	drawGrid         bool
 	drawDensityField bool
 	drawParticles    bool
-	grayscale        bool
 }
 
 type agent struct {
@@ -43,7 +41,7 @@ type agent struct {
 
 const (
 	numOfCells         = 36 // Number of cells (not including the boundary)
-	particleTimeToLive = 8
+	particleTimeToLive = 5
 	maxNumberOfAgents  = 10
 	distanceThreshold  = 80
 	tickerResetTime    = 2
@@ -74,8 +72,6 @@ var (
 	termStyle  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
 	agentStyle = tcell.StyleDefault.Foreground(tcell.ColorGreenYellow).Background(tcell.ColorBlack)
 	gridStyle  = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.ColorBlack)
-
-	jsonFile = build.Default.GOPATH + "/src/github.com/esimov/ascii-fluid/" + websocket.JsonFile
 )
 
 func init() {
@@ -92,10 +88,9 @@ func New() *Terminal {
 func (t *Terminal) Init() *Terminal {
 	var err error
 	t.opts = &options{
-		drawGrid:         true,
+		drawGrid:         false,
 		drawDensityField: true,
 		drawParticles:    true,
-		grayscale:        false,
 	}
 
 	lastTime = time.Now()
@@ -141,8 +136,39 @@ func (t *Terminal) Render() {
 	mx, my := -1, -1
 
 	quit := make(chan struct{})
+	tcpConnData := make(chan string)
+
+	// Open TCP connection.
+	l, err := net.Listen("tcp", "localhost:6000")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer l.Close()
+
 	go func() {
+		// Wait for a connection.
+		conn, err := l.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		for {
+			// Handle the connection in a new goroutine.
+			// Multiple connections may be served concurrently.
+			go func(c net.Conn) {
+				reader := bufio.NewReader(c)
+				for {
+					data, err := reader.ReadString('\n')
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "%v\n", err)
+						return
+					}
+					tcpConnData <- string(data)
+				}
+				// Shut down the connection.
+				c.Close()
+			}(conn)
+
 			ev := t.screen.PollEvent()
 
 			switch ev := ev.(type) {
@@ -151,7 +177,6 @@ func (t *Terminal) Render() {
 				t.screen.Sync()
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyEscape {
-					os.Remove(jsonFile)
 					// We received an interrupt signal, shut down.
 					if err := websocket.HttpServer.Shutdown(context.Background()); err != nil {
 						// Error from closing listeners, or context timeout:
@@ -181,12 +206,7 @@ func (t *Terminal) Render() {
 		}
 	}()
 
-	f, _ := os.Open(jsonFile)
-	defer f.Close()
-
-	lineIdx := 1
-
-	// Sends to the channel every 3s
+	// Sends to the channel on every second multiplied with `tickerResetTime`.
 	tick := time.NewTicker(time.Second * tickerResetTime).C
 
 loop:
@@ -194,21 +214,9 @@ loop:
 		select {
 		case <-quit:
 			break loop
-		case <-time.After(time.Millisecond * 10):
-		case <-tick:
-			start = time.Now()
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			// Clear the screen
-			t.screen.Fill(' ', termStyle)
-			t.update()
-		}()
-
-		if line, err := t.readDataStream(f, int64(lineIdx)); err != io.EOF || err == nil {
+		case data := <-tcpConnData:
 			det := &websocket.Detection{}
-			if err := json.Unmarshal(line, det); err == nil {
+			if err := json.Unmarshal([]byte(data), det); err == nil {
 				dt := time.Since(start).Seconds()
 				if dt > tickerResetTime {
 					curx, cury = det.X, det.Y
@@ -222,8 +230,17 @@ loop:
 
 				t.onMouseMove(posX, posY)
 			}
-			lineIdx++
+		case <-time.After(time.Millisecond * 10):
+		case <-tick:
+			start = time.Now()
 		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Clear the screen
+			t.screen.Fill(' ', termStyle)
+			t.update()
+		}()
 
 		wg.Wait()
 		t.screen.Show()
@@ -367,29 +384,6 @@ func (t *Terminal) drawGrid() {
 // drawAgent draws an agent at {x, y} position.
 func (t *Terminal) drawAgent(mx, my int) {
 	t.screen.SetContent(mx, my, tcell.RuneBlock, nil, agentStyle)
-}
-
-// readDataStream reads the detection results from file
-func (t *Terminal) readDataStream(file *os.File, lineNum int64) ([]byte, error) {
-	if lineNum < 1 {
-		return nil, fmt.Errorf("invalid request: line %d", lineNum)
-	}
-	if _, err := file.Seek(lineNum, 0); err != nil {
-		return nil, err
-	}
-	scanner := bufio.NewScanner(file)
-
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		advance, token, err = bufio.ScanLines(data, atEOF)
-		return
-	})
-
-	for i := 0; i < int(lineNum); i++ {
-		if !scanner.Scan() {
-			return nil, io.EOF
-		}
-	}
-	return scanner.Bytes(), scanner.Err()
 }
 
 // isAgentActive verifies if an agent at {x, y} position is visible or not.

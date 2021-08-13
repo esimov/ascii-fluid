@@ -1,11 +1,12 @@
 package websocket
 
 import (
-	"encoding/json"
+	"context"
 	"log"
+	"net"
 	"net/http"
-	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,23 +22,17 @@ type HttpParams struct {
 	Root    string
 }
 
-type hub struct {
-	coords chan Detection
-}
-
 // A server application calls the Upgrade method from an HTTP request handler to initiate a connection
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
 
+// socketChan is a channel used for sending the detection results through
+var socketChan = make(chan string)
+
+// HttpServer initializes a http server and listen for connection
 var HttpServer http.Server
-
-var detHub = &hub{
-	coords: make(chan Detection),
-}
-
-const JsonFile = "facedet.json"
 
 // Init initializes the webserver and websocket connection
 func Init(p *HttpParams) {
@@ -81,32 +76,13 @@ func readSocket(conn *websocket.Conn) {
 			}
 			return
 		}
-		det := &Detection{}
-		err = json.Unmarshal(msg, det)
-		if err != nil {
-			log.Printf("error: %v", err)
-		}
-
-		detHub.coords <- *det
+		socketChan <- string(msg)
 
 		if err := conn.WriteMessage(messageType, msg); err != nil {
 			log.Println(err)
 			return
 		}
 	}
-}
-
-// writeDataStream writes the detection results into the destination file
-func writeDataStream(file *os.File, det Detection) error {
-	data, err := json.Marshal(det)
-	if err != nil {
-		return err
-	}
-	_, err = file.WriteString(string(data) + "\n")
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // wsHandler defines the websocket connection endpoint
@@ -124,29 +100,30 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	go readSocket(conn)
 }
 
-// run runs the face detection event concurrently and writes
-// the detection results coordinates into the destination file
+// run runs the face detection event concurrently
 func run() {
 	defer func() {
-		close(detHub.coords)
+		close(socketChan)
 	}()
 
-	wd, err := os.Getwd()
+	var d net.Dialer
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	conn, err := d.DialContext(ctx, "tcp", "localhost:6000")
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to dial: %v", err)
 	}
-	dir := filepath.Dir(wd)
-	f, err := os.Create(dir + "/" + JsonFile)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+	defer conn.Close()
 
 	for {
 		select {
-		case det, ok := <-detHub.coords:
+		case det, ok := <-socketChan:
 			if ok {
-				writeDataStream(f, det)
+				// Transfer the detection results trough a TCP connection.
+				if _, err := conn.Write([]byte(det + "\n")); err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 	}

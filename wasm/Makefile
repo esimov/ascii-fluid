@@ -29,6 +29,7 @@ serve:
 
 terminal:
 	$(COMMAND)
+	@sleep 1.5
 
 clean:
 	rm -f *.wasm
