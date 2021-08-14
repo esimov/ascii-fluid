@@ -42,9 +42,9 @@ type agent struct {
 const (
 	numOfCells         = 36 // Number of cells (not including the boundary)
 	particleTimeToLive = 5
-	maxNumberOfAgents  = 10
+	maxNumberOfAgents  = 5
 	distanceThreshold  = 80
-	tickerResetTime    = 2
+	tickerResetTime    = 4
 
 	canvasWidth  = 640
 	canvasHeight = 480
@@ -69,9 +69,9 @@ var (
 )
 
 var (
-	termStyle  = tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
-	agentStyle = tcell.StyleDefault.Foreground(tcell.ColorGreenYellow).Background(tcell.ColorBlack)
-	gridStyle  = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.ColorBlack)
+	termStyle  = tcell.StyleDefault.Foreground(tcell.ColorFloralWhite).Background(tcell.NewRGBColor(0, 23, 31))
+	agentStyle = tcell.StyleDefault.Foreground(tcell.ColorYellow).Background(tcell.NewRGBColor(0, 23, 31)).Dim(true)
+	gridStyle  = tcell.StyleDefault.Foreground(tcell.ColorDimGray).Background(tcell.NewRGBColor(0, 23, 31)).Dim(true)
 )
 
 func init() {
