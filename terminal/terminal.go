@@ -41,10 +41,12 @@ type agent struct {
 
 const (
 	numOfCells         = 36 // Number of cells (not including the boundary)
-	particleTimeToLive = 5
+	particleTimeToLive = 10
 	maxNumberOfAgents  = 5
 	distanceThreshold  = 80
 	tickerResetTime    = 4
+	minNumOfParticles  = 50
+	maxNumOfParticles  = 100
 
 	canvasWidth  = 640
 	canvasHeight = 480
@@ -64,6 +66,8 @@ var (
 	cellSize   int
 	particles  []*fluid.Particle
 	agents     []agent
+
+	numOfParticles = 50
 
 	scanner *bufio.Scanner
 )
@@ -198,6 +202,9 @@ func (t *Terminal) Render() {
 				switch ev.Buttons() {
 				case tcell.Button1:
 					isMouseDown = true
+					if numOfParticles < maxNumOfParticles {
+						numOfParticles++
+					}
 				case tcell.ButtonNone:
 					isMouseDown = false
 					isTabDown = false
@@ -284,7 +291,7 @@ func (t *Terminal) onMouseMove(mouseX, mouseY int) {
 	}
 
 	if isMouseDown && t.opts.drawParticles {
-		for i := 0; i < 30; i++ {
+		for i := 0; i < numOfParticles; i++ {
 			p := fluid.NewParticle(
 				float64(mouseX)+random(rnd, -10, 10),
 				float64(mouseY)+random(rnd, -10, 10),
@@ -367,6 +374,14 @@ func (t *Terminal) update() {
 
 	for i := 0; i < len(agents); i++ {
 		t.drawAgent(agents[i].x, agents[i].y)
+	}
+
+	if !isMouseDown {
+		time.AfterFunc(time.Second, func() {
+			if numOfParticles > minNumOfParticles {
+				numOfParticles--
+			}
+		})
 	}
 
 	lastTime = time.Now()
