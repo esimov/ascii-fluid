@@ -41,12 +41,12 @@ type agent struct {
 
 const (
 	numOfCells         = 36 // Number of cells (not including the boundary)
-	particleTimeToLive = 10
+	particleTimeToLive = 8
 	maxNumberOfAgents  = 5
 	distanceThreshold  = 80
 	tickerResetTime    = 4
-	minNumOfParticles  = 50
-	maxNumOfParticles  = 100
+	minNumOfParticles  = 30
+	maxNumOfParticles  = 60
 
 	canvasWidth  = 640
 	canvasHeight = 480

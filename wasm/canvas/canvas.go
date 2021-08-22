@@ -99,6 +99,8 @@ func (c *Canvas) Render() {
 			}()
 			return nil
 		})
+		// Release the rendering function to free up resources.
+		defer c.renderer.Release()
 		c.window.Call("requestAnimationFrame", c.renderer)
 		c.detectKeyPress()
 		<-c.done
