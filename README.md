@@ -17,8 +17,8 @@ The fluid solver is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics f
 
 This will start three new operation simultaneously:
 - it will open a new terminal window
-- it will start a new web server for listening to the websocket connection
-- it will build the webassembly interface for accessing the webcam.
+- it will start a new web server which listen on the incoming websocket connection
+- and will build the webassembly interface for accessing the webcam.
 
 The coordinates of the first detected face will be transferred over the websocket connection to the terminal application. On each refresh rate (defined as a parameter) the terminal will update the fluid simulation.
 
@@ -35,7 +35,7 @@ In MacOS you must set the accessibility authorization for the terminal you are r
 ## Controls
 
 - <kbd>**CTRL-D**</kbd> show/hide the grid system
-- <kbd>**TAB + mouse down**</kbd> activate/deactivate agents. Agents generates repulsions.
+- <kbd>**TAB + mouse down**</kbd> activate/deactivate agents (agents generates repulsions).
 
 ## Libraries used
 
