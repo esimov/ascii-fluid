@@ -74,37 +74,49 @@ func NewCanvas() *Canvas {
 }
 
 // Render calls the `requestAnimationFrame` Javascript function in asynchronous mode.
-func (c *Canvas) Render() {
-	var data = make([]byte, c.windowSize.width*c.windowSize.height*4)
+func (c *Canvas) Render() error {
+	width, height := c.windowSize.width, c.windowSize.height
+	var data = make([]byte, width*height*4)
 	c.done = make(chan struct{})
 
-	if err := det.UnpackCascades(); err == nil {
-		c.renderer = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			go func() {
-				width, height := c.windowSize.width, c.windowSize.height
-				c.reqID = c.window.Call("requestAnimationFrame", c.renderer)
-				// Draw the webcam frame to the canvas element
-				c.ctx.Call("drawImage", c.video, 0, 0)
-				rgba := c.ctx.Call("getImageData", 0, 0, width, height).Get("data")
-
-				uint8Arr := js.Global().Get("Uint8Array").New(rgba)
-				js.CopyBytesToGo(data, uint8Arr)
-				pixels := c.rgbaToGrayscale(data)
-				res := det.DetectFaces(pixels, height, width)
-				c.drawDetection(res)
-
-				if len(res) > 0 {
-					c.send(string(c.stringify(res[0])))
-				}
-			}()
-			return nil
-		})
-		// Release the rendering function to free up resources.
-		defer c.renderer.Release()
-		c.window.Call("requestAnimationFrame", c.renderer)
-		c.detectKeyPress()
-		<-c.done
+	err := det.UnpackCascades()
+	if err != nil {
+		return err
 	}
+
+	c.renderer = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		go func() {
+			width, height := c.windowSize.width, c.windowSize.height
+			c.reqID = c.window.Call("requestAnimationFrame", c.renderer)
+			// Draw the webcam frame to the canvas element
+			c.ctx.Call("drawImage", c.video, 0, 0)
+			rgba := c.ctx.Call("getImageData", 0, 0, width, height).Get("data")
+
+			uint8Arr := js.Global().Get("Uint8Array").New(rgba)
+			js.CopyBytesToGo(data, uint8Arr)
+			pixels := c.rgbaToGrayscale(data)
+
+			// Resetore the slice to its default values to avoid unnecessary memory allocation.
+			// The GC won't clean up the memory address allocated by this slice otherwise
+			// and the memory will keep up increasing on each iteration.
+			data = make([]byte, len(data))
+
+			res := det.DetectFaces(pixels, height, width)
+			if len(res) > 0 {
+				fmt.Println(res)
+				c.drawDetection(res)
+				c.send(string(c.stringify(res[0])))
+			}
+		}()
+		return nil
+	})
+	// Release the rendering function to free up resources.
+	defer c.renderer.Release()
+	c.window.Call("requestAnimationFrame", c.renderer)
+	c.detectKeyPress()
+	<-c.done
+
+	return nil
 }
 
 // StartWebcam reads the webcam data and feeds it into the canvas element.
