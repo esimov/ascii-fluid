@@ -6,11 +6,11 @@ else
 	JSDIR = $(PARENTDIR)/wasm/js
 	ifeq ($(UNAME), Linux)
 		BROWSER = xdg-open
-		COMMAND = gnome-terminal --tab --command="bash -c 'go run $(PARENTDIR)/main.go; $(SHELL)'"
+		COMMAND = gnome-terminal --tab --command="bash -c 'cd $(PARENTDIR) && go run main.go; $(SHELL)'"
 	endif
 	ifeq ($(UNAME), Darwin)
 		BROWSER = open
-		COMMAND = osascript -e 'tell app "Terminal" to do script "go run $(PARENTDIR)/main.go"'
+		COMMAND = osascript -e 'tell app "Terminal" to do script "cd $(PARENTDIR) && go run main.go"'
 	endif
 endif
 
