@@ -1,6 +1,6 @@
 # 🌊 ascii-fluid
 
-**ascii-fluid** is a face controlled ASCII fluid simulation running real time in your terminal. You can control the fluid dynamics with your face by using a webcam, but also with the mouse or touchpad.
+**ascii-fluid** is a face controlled ASCII fluid simulation running real time in your terminal. You can control the fluid dynamics with your face by using a webcam, but also with your mouse or touchpad.
 
 ![ascii-fluid](https://user-images.githubusercontent.com/883386/73605776-2b83bf00-45ab-11ea-93d1-ad6b2a6010e7.gif)
 
