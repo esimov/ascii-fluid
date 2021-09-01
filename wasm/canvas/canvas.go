@@ -96,9 +96,9 @@ func (c *Canvas) Render() error {
 			js.CopyBytesToGo(data, uint8Arr)
 			pixels := c.rgbaToGrayscale(data)
 
-			// Resetore the slice to its default values to avoid unnecessary memory allocation.
-			// The GC won't clean up the memory address allocated by this slice otherwise
-			// and the memory will keep up increasing on each iteration.
+			// Restore the data slice to its default values to avoid unnecessary memory allocation.
+			// Otherwise, the GC won't clean up the memory address allocated by this slice
+			// and the memory will keep up increasing by each iteration.
 			data = make([]byte, len(data))
 
 			res := det.DetectFaces(pixels, height, width)
@@ -110,8 +110,9 @@ func (c *Canvas) Render() error {
 		}()
 		return nil
 	})
-	// Release the rendering function to free up resources.
+	// Release renderer to free up resources.
 	defer c.renderer.Release()
+
 	c.window.Call("requestAnimationFrame", c.renderer)
 	c.detectKeyPress()
 	<-c.done
