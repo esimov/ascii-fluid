@@ -13,7 +13,7 @@
 
 ## How does it works?
 
-The fluid solver is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](https://pdfs.semanticscholar.org/847f/819a4ea14bd789aca8bc88e85e906cfc657c.pdf). The [tcell](https://github.com/gdamore/tcell) library is used for rendering the fluid simulation in terminal and [gorrilla/websocket](https://github.com/gorilla/websocket) package for communicating through a websocket connection with the Webassembly version of the [Pigo](https://github.com/esimov/pigo) face detection library.
+The fluid solver is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](https://pdfs.semanticscholar.org/847f/819a4ea14bd789aca8bc88e85e906cfc657c.pdf). [tcell](https://github.com/gdamore/tcell) library is used for rendering the fluid simulation in terminal and [gorrilla/websocket](https://github.com/gorilla/websocket) package for communicating through a websocket connection with the Webassembly version of the [Pigo](https://github.com/esimov/pigo) face detection library.
 
 This will start three new operation simultaneously:
 - open a new terminal window
@@ -37,7 +37,7 @@ In MacOS you must set the accessibility authorization for the terminal you are r
 - <kbd>**CTRL-D**</kbd> show/hide the grid system
 - <kbd>**TAB + mouse down**</kbd> activate/deactivate agents (agents generates repulsions).
 
-## Libraries used
+## Dependencies
 
 - https://github.com/gdamore/tcell
 - https://github.com/esimov/pigo
