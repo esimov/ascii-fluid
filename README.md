@@ -16,9 +16,9 @@
 The fluid solver is mainly based on Jos Stam's paper [Real-Time Fluid Dynamics for Games](https://pdfs.semanticscholar.org/847f/819a4ea14bd789aca8bc88e85e906cfc657c.pdf). The [tcell](https://github.com/gdamore/tcell) library is used for rendering the fluid simulation in terminal and [gorrilla/websocket](https://github.com/gorilla/websocket) package for communicating through a websocket connection with the Webassembly version of the [Pigo](https://github.com/esimov/pigo) face detection library.
 
 This will start three new operation simultaneously:
-- it will open a new terminal window
-- it will start a new web server which listen on the incoming websocket connection
-- and will build the webassembly interface for accessing the webcam.
+- open a new terminal window
+- start a new web server which is listening on the incoming websocket connection
+- build the webassembly interface for accessing the webcam.
 
 The coordinates of the first detected face will be transferred over the websocket connection to the terminal application. On each refresh rate (defined as a parameter) the terminal will update the fluid simulation.
 
