@@ -54,7 +54,7 @@ github.com/gdamore/tcell/terminfo/x/xfce
 github.com/gdamore/tcell/terminfo/x/xnuppc
 github.com/gdamore/tcell/terminfo/x/xterm
 github.com/gdamore/tcell/terminfo/x/xterm_kitty
-# github.com/gorilla/websocket v1.4.1
+# github.com/gorilla/websocket v1.5.3
 github.com/gorilla/websocket
 # github.com/lucasb-eyer/go-colorful v1.0.2
 github.com/lucasb-eyer/go-colorful
